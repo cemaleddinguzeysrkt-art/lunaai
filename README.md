@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# [Project Name]
 
-## Getting Started
+This is a POC project for Luna AI. It is built using Next.js, TypeScript, Tailwind CSS, and utilizes Prisma with a MariaDB database.
 
-First, run the development server:
+## 🚀 Getting Started
+
+Follow these steps to set up and run the project locally.
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed on your system:
+
+- **Node.js** (LTS version recommended, e.g., v18 or v20)
+- **npm**
+- **MariaDB/MySQL Instance**: You need a running database server (locally or remote) that the application can connect to.
+
+### 1. Environment Variables
+
+Create a file named `.env` in the root directory of the project based on the `.env.example` file provided. This file stores sensitive configuration details, including your database connection string.
+
+### 2. Installation and Prisma Schema Generation
+
+This step installs dependencies and builds the necessary client code for database interaction.
+
+| Command                   | Description                                                                                                                                                             |
+| :------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`npm install`**         | Installs all required project dependencies defined in `package.json`.                                                                                                   |
+| **`npx prisma generate`** | **Reads `schema.prisma`** and generates the Prisma Client code (`@/app/generated/prisma/client`). This allows TypeScript to recognize your database models and methods. |
+
+Run the commands in order:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Install all project dependencies
+npm install
+
+# 2. Generate the Prisma Client
+npx prisma generate
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Thank you!
