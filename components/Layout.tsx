@@ -5,6 +5,7 @@ import { ChevronDown, LogOut, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -28,7 +29,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-10">
           {/* logo */}
           <div className="flex items-center">
-            <img src="/logo.svg" alt="Luna logo" width={100} height={28} />
+            <Image
+              src="/logo.svg"
+              alt="Luna logo"
+              width={100}
+              height={28}
+              priority
+            />
           </div>
 
           {/* navigation */}
@@ -81,11 +88,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-neutral-50 transition-colors cursor-pointer border border-transparent hover:border-neutral-100"
             >
-              <img
-                src="https://picsum.photos/32/32"
-                alt="Profile"
-                className="w-8 h-8 rounded-full border border-neutral-200 shadow-sm"
-              />
+              <div className="relative">
+                <Image
+                  src="https://picsum.photos/32/32"
+                  alt="Profile"
+                  width={32}
+                  height={32}
+                  className="rounded-full border border-neutral-200 shadow-sm"
+                />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+              </div>
+
               <div className="text-sm font-semibold text-subtitle-dark hidden md:block">
                 Brooklyn Simmons
               </div>

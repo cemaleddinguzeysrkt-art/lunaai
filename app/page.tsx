@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function LandingPage() {
   return (
@@ -11,7 +12,13 @@ export default function LandingPage() {
 
       <div className="z-10 max-w-2xl px-6 text-center">
         <div className="flex justify-center mb-8">
-          <img src="/logo-simple.svg" alt="Luna logo" width={100} height={28} />
+          <Image
+            src="/logo-simple.svg"
+            alt="Luna logo"
+            width={100}
+            height={28}
+            priority
+          />
         </div>
 
         <h1 className="text-5xl font-bold text-neutral-900 mb-6 tracking-tight">
