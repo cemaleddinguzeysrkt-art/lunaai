@@ -159,7 +159,7 @@ export default function ArticleReview({ articles }: ArticleReviewProps) {
               size="sm"
               className="flex gap-2 items-center cursor-pointer rounded-lg h-7"
             >
-              <Globe size={14} className="text-subtitle-dark/80" />
+              {/* <Globe size={14} className="text-subtitle-dark/80" /> */}
               <span className="text-xs text-subtitle-dark font-semibold">
                 Go web
               </span>
