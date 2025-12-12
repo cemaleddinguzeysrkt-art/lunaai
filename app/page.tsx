@@ -25,7 +25,7 @@ export default function LandingPage() {
           Welcome to Luna AI
         </h1>
         <p className="text-xl text-neutral-500 mb-10 leading-relaxed">
-          The next-generation AI platform.
+          The next-generation AI news platform.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
