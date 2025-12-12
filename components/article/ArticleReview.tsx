@@ -330,7 +330,7 @@ export default function ArticleReview({ articles }: ArticleReviewProps) {
                           w-5 h-5 rounded border flex items-center justify-center transition-all duration-200
                           ${
                             checkedFilters[`${group.name}-${option}`]
-                              ? "bg-checkbox-bg z-100"
+                              ? "bg-checkbox-bg"
                               : "border-gray-300 group-hover:border-blue-400"
                           }
                         `}
