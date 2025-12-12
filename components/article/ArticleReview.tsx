@@ -231,7 +231,7 @@ export default function ArticleReview({
       <div className="flex-1 flex overflow-hidden">
         {/* article list */}
         <aside className="w-[250px] border-r-2 border-border-dark bg-white flex flex-col shrink-0">
-          <div className="flex-1 overflow-y-auto py-4 px-[42.5px] space-y-4 scrollbar-custom ">
+          <div className="flex-1 overflow-y-auto py-4 px-[41.5px] space-y-4 scrollbar-custom ">
             {articles.map((article, idx) => {
               const colorClass =
                 articleColors[article.id]?.normal ?? "border-normal";
