@@ -48,6 +48,8 @@ export default function ArticleReview({
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const formattedActiveArticleContent = activeArticle?.content?.replace(/\\n/g, "\n") ?? "";
+
   useEffect(() => {
     const handleSelection = () => {
       const selection = window.getSelection();
@@ -235,6 +237,8 @@ export default function ArticleReview({
             {articles.map((article, idx) => {
               const colorClass =
                 articleColors[article.id]?.normal ?? "border-normal";
+              
+              const formattedContent = article?.content?.replace(/\\n/g, "\n") ?? "";
 
               return (
                 <div
@@ -252,7 +256,7 @@ export default function ArticleReview({
                       {article.header}
                     </h3>
                     <p className="text-xs text-neutral-900 line-clamp-8 leading-relaxed font-poppins">
-                      {article.content}
+                      {formattedContent}
                     </p>
                   </div>
                   <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium text-neutral-900">
@@ -292,7 +296,7 @@ export default function ArticleReview({
                   </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
                   <span className="text-subtitle-dark font-medium text-sm">
-                    {activeArticle.author}
+                    {activeArticle.author || "Unknown author"}
                   </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 "></span>
                   <span className="text-subtitle-dark font-medium text-sm">
@@ -303,11 +307,10 @@ export default function ArticleReview({
 
               <div ref={contentRef}>
                 <div
-                  className="prose prose-sm max-w-none text-title-dark/90 text-sm leading-8 selection:bg-blue-100 selection:text-blue-900"
-                  dangerouslySetInnerHTML={{
-                    __html: activeArticle?.content ?? "",
-                  }}
-                />
+                  className="prose prose-sm max-w-none text-title-dark/90 text-sm leading-8 selection:bg-blue-100 selection:text-blue-900 whitespace-pre-wrap"
+                >
+                  {formattedActiveArticleContent ?? ""}
+                </div>
               </div>
             </div>
           </div>
