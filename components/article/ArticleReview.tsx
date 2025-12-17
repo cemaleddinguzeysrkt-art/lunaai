@@ -278,7 +278,7 @@ export default function ArticleReview({
               className={`bg-white min-h-full p-12 shadow-sm relative border-x rounded-[18px] border ${articleColors[activeArticleId]?.normal}`}
             >
               <div className="text-title-red font-bold text-sm tracking-wider uppercase px-2 py-1 mb-2 rounded w-fit ml-auto">
-                {activeArticle.company_news[0].company?.name ||
+                {activeArticle.company_news[0]?.company?.name ||
                   "Unknown Company"}
               </div>
 
