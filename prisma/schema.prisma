@@ -14,11 +14,12 @@ model company {
   user_id         Int?
   created_date    DateTime?         @default(now()) @db.DateTime(0)
   tags            String?           @db.VarChar(255)
-  categories      String?           @db.VarChar(255)
-  industries      String?           @db.VarChar(255)
+  status_id       Int?
+  origin_id       Int?
   user            user?             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "company_ibfk_1")
   company_history company_history[]
   company_news    company_news[]
+  company_note    company_note[]
   lead            lead[]
 
   @@index([user_id], map: "user_id")
@@ -29,7 +30,7 @@ model company_history {
   company_id   Int?
   user_id      Int?
   created_date DateTime? @default(now()) @db.DateTime(0)
-  detail       String?   @db.Text
+  history      String?   @db.Text
   company      company?  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "company_history_ibfk_1")
   user         user?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "company_history_ibfk_2")
 
@@ -135,14 +136,44 @@ model user {
   id              Int               @id @default(autoincrement())
   name            String            @db.VarChar(255)
   created_date    DateTime?         @default(now()) @db.DateTime(0)
-  password_hash   String            @db.VarChar(255)
+  password        String            @db.VarChar(255)
   role            String?           @db.VarChar(50)
+  email           String            @db.VarChar(255)
   company         company[]
   company_history company_history[]
+  company_note    company_note[]
   lead            lead[]
   task            task[]
   training        training[]
   training_target training_target[]
+}
+
+model company_note {
+  id           Int       @id @default(autoincrement())
+  company_id   Int?
+  user_id      Int?
+  created_date DateTime? @default(now()) @db.DateTime(0)
+  note         String?   @db.Text
+  company      company?  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "company_note_ibfk_1")
+  user         user?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "company_note_ibfk_2")
+
+  @@index([company_id], map: "company_id")
+  @@index([user_id], map: "user_id")
+}
+
+model news_training {
+  id         Int       @id @default(autoincrement())
+  news_id    Int?
+  like       Int?
+  category   String?   @db.VarChar(255)
+  user_id    Int?
+  time_stamp DateTime? @db.DateTime(0)
+  feedback   String?   @db.TinyText
+}
+
+model transfer_watermark {
+  table_name          String    @id @db.VarChar(50)
+  last_processed_date DateTime? @db.DateTime(0)
 }
 
 enum task_status {
