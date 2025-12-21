@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getArticles() {
   const news = await prisma.news.findMany({
+    take:100,
     include: {
       news_source: true,
       company_news: {
