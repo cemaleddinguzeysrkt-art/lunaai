@@ -85,7 +85,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 currentPath.startsWith("/companies") && "text-blue-600"
               )}
             >
-              Leads
+              Companies
             </Link>
           </nav>
         </div>

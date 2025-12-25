@@ -23,6 +23,7 @@ import { Button } from "../ui/button";
 import { definition as Definition } from "@/app/generated/prisma/client";
 import { createCompany } from "@/app/actions/createCompanyAction";
 import { toast } from "sonner";
+import { ArticlesArrayType } from "@/lib/types/news-types";
 
 interface CompanyData {
   name: string;
@@ -37,11 +38,11 @@ interface CompanyData {
 interface CompanyModalProps {
   open: boolean;
   onClose: () => void;
-  // onSave: (data: CompanyData) => void;
   onDelete: () => void;
   origins: Definition[];
   statuses: Definition[];
   tags: Definition[];
+  activeNewsUrl: string;
 }
 
 const AddCompanyModal: React.FC<CompanyModalProps> = ({
@@ -50,6 +51,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
   origins,
   statuses,
   tags,
+  activeNewsUrl,
 }) => {
   const [formData, setFormData] = useState<CompanyData>({
     name: "",
@@ -57,7 +59,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
     status: "",
     origin: "",
     notes: [""],
-    resourceUrls: [""],
+    resourceUrls: [activeNewsUrl],
     tags: [],
   });
 
@@ -86,6 +88,20 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [onClose]);
+
+  useEffect(() => {
+    if (
+      open &&
+      activeNewsUrl &&
+      (!formData.resourceUrls.length ||
+        (formData.resourceUrls.length === 1 && formData.resourceUrls[0] === ""))
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        resourceUrls: [activeNewsUrl],
+      }));
+    }
+  }, [activeNewsUrl, open]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -509,20 +525,13 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="flex items-center !justify-between px-5 w-full">
+        <DialogFooter className="flex items-center justify-start! px-5 w-full">
           <Button
             onClick={handleSave}
             className="text-sm font-medium cursor-pointer flex items-center gap-2"
           >
             {isSavingCompany && <Loader2 className="size-4 animate-spin" />}
             <span>{isSavingCompany ? "Saving" : "Save"}</span>
-          </Button>
-          <Button
-            className="text-sm font-medium cursor-pointer"
-            variant="outline"
-            onClick={onClose}
-          >
-            Delete
           </Button>
         </DialogFooter>
       </DialogContent>

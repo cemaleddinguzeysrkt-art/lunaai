@@ -143,7 +143,7 @@ export default function Companies({ initialCompanies }: CompaniesProps) {
                 size="sm"
               >
                 <Plus size={14} />
-                <span>Add lead</span>
+                <span>Add company</span>
               </Button>
             </div>
           </div>

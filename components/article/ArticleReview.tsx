@@ -83,6 +83,8 @@ export default function ArticleReview({
   const containerRef = useRef<HTMLDivElement>(null);
   const leftWidthRef = useRef(leftSidebarWidth);
   const rightWidthRef = useRef(rightSidebarWidth);
+  const articleListRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const filtersScrollContainerRef = useRef<HTMLDivElement>(null);
 
   const activeArticle =
     articles.find((a) => a.id === activeArticleId) || articles[0];
@@ -209,41 +211,37 @@ export default function ArticleReview({
     } catch (err) {
       console.error("Save failed:", err);
     }
-  }, [
-    isResizingLeft,
-    isResizingRight,
-    trainingPageType,
-  ]);
-  
+  }, [isResizingLeft, isResizingRight, trainingPageType]);
+
   const resize = useCallback(
-  (e: MouseEvent) => {
-    if (!containerRef.current) return;
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const totalWidth = containerRect.width;
+    (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const totalWidth = containerRect.width;
 
-    const MIN_PX = 250;
-    const MAX_PX = 400;
+      const MIN_PX = 250;
+      const MAX_PX = 400;
 
-    if (isResizingLeft) {
-      let newPx = e.clientX - containerRect.left;
-      newPx = Math.max(MIN_PX, Math.min(MAX_PX, newPx));
-      const percent = Math.round((newPx / totalWidth) * 100 * 10) / 10;
-      
-      setLeftSidebarWidth(percent);      
-      leftWidthRef.current = percent;   
-    }
+      if (isResizingLeft) {
+        let newPx = e.clientX - containerRect.left;
+        newPx = Math.max(MIN_PX, Math.min(MAX_PX, newPx));
+        const percent = Math.round((newPx / totalWidth) * 100 * 10) / 10;
 
-    if (isResizingRight) {
-      let newPx = containerRect.right - e.clientX;
-      newPx = Math.max(MIN_PX, Math.min(MAX_PX, newPx));
-      const percent = Math.round((newPx / totalWidth) * 100 * 10) / 10;
-      
-      setRightSidebarWidth(percent);     
-      rightWidthRef.current = percent;   
-    }
-  },
-  [isResizingLeft, isResizingRight]
-);
+        setLeftSidebarWidth(percent);
+        leftWidthRef.current = percent;
+      }
+
+      if (isResizingRight) {
+        let newPx = containerRect.right - e.clientX;
+        newPx = Math.max(MIN_PX, Math.min(MAX_PX, newPx));
+        const percent = Math.round((newPx / totalWidth) * 100 * 10) / 10;
+
+        setRightSidebarWidth(percent);
+        rightWidthRef.current = percent;
+      }
+    },
+    [isResizingLeft, isResizingRight]
+  );
 
   useEffect(() => {
     if (isResizingLeft || isResizingRight) {
@@ -314,10 +312,16 @@ export default function ArticleReview({
     try {
       await applyTrainingFilters(filterIds, activeArticleId);
       shiftNextNews();
-      toast.success("Filters applied successfully", { richColors: true });
+      // toast.success("Filters applied successfully", { richColors: true });
       setCheckedFilters({});
+      if (filtersScrollContainerRef.current) {
+        filtersScrollContainerRef.current.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
     } catch (error) {
-      toast.error("Failed to apply filters", { richColors: true });
+      // toast.error("Failed to apply filters", { richColors: true });
     } finally {
       setApplyingFilters(false);
     }
@@ -344,6 +348,13 @@ export default function ArticleReview({
     console.log("hydrrr checkkk", categories, industries);
     console.log("hydrrr", hydrated);
   }, [activeArticle, trainingPageType]);
+
+  useEffect(() => {
+    const element = articleListRefs.current.get(activeArticleId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [activeArticleId]);
 
   return (
     <div ref={containerRef} className="flex flex-col h-full bg-white">
@@ -428,7 +439,7 @@ export default function ArticleReview({
               onClick={() => setAddCompanyModalOpened(true)}
             >
               <Plus size={14} className="" />
-              <span className="text-xs font-semibold">Long List</span>
+              <span className="text-xs font-semibold">Add company</span>
             </Button>
           </div>
 
@@ -474,7 +485,7 @@ export default function ArticleReview({
             // maxWidth: 400,
           }}
         >
-          <div className="flex-1 overflow-y-auto py-4 px-[41.5px] space-y-4 scrollbar-custom ">
+          <div className="flex-1 overflow-y-auto py-4  space-y-4 scrollbar-custom ">
             {articles && articles.length > 0 ? (
               articles.map((article, idx) => {
                 const colorClass =
@@ -486,12 +497,16 @@ export default function ArticleReview({
                 return (
                   <div
                     key={article.id}
-                    className="flex flex-col items-center gap-2"
+                    ref={(el) => {
+                      if (el) articleListRefs.current.set(article.id, el);
+                      else articleListRefs.current.delete(article.id);
+                    }}
+                    className="flex flex-col items-center gap-2 scroll-mt-2"
                   >
                     <div
                       onClick={() => setActiveArticleId(article.id)}
                       className={`
-                  py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs w-[153px]
+                  py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs min-w-[153px] w-[78%]
                   ${colorClass}
                 `}
                     >
@@ -509,7 +524,9 @@ export default function ArticleReview({
                 );
               })
             ) : (
-              <div className="flex items-center justify-center text-subtitle-dark">No news availale</div>
+              <div className="flex items-center justify-center text-subtitle-dark">
+                No news availale
+              </div>
             )}
           </div>
           {/* left sidebar resizer */}
@@ -608,7 +625,9 @@ export default function ArticleReview({
             )}
           </section>
         ) : (
-          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">No news selected</div>
+          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
+            No news selected
+          </div>
         )}
 
         {/* filters */}
@@ -620,7 +639,10 @@ export default function ArticleReview({
             // maxWidth: 400,
           }}
         >
-          <div className="flex-1 overflow-y-auto pt-6 pb-4 space-y-4 scrollbar-custom flex flex-col">
+          <div
+            className="flex-1 overflow-y-auto pt-6 pb-4 space-y-4 scrollbar-custom flex flex-col"
+            ref={filtersScrollContainerRef}
+          >
             {trainingPageType === "classifying" && (
               <div className="space-y-6">
                 <div className="px-4 border-b-2 border-border-dark pb-6">
@@ -807,6 +829,7 @@ export default function ArticleReview({
         statuses={statuses}
         origins={origins}
         tags={tags}
+        activeNewsUrl={activeArticle?.url ?? ""}
       />
 
       {/* cleaning feedback modal */}
