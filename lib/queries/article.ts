@@ -3,17 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth";
 import { definition as Definition } from "@/app/generated/prisma/client";
 
-const session = await getServerSession(authOptions);
-
-if (!session) {
-  throw new Error("Unauthorized");
-}
-
-const userId = session.user.id;
-
 export async function getArticles(
   trainingType: "classifying" | "cleaning" = "cleaning"
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const userId = session.user.id;
+
   const trainedNewsIds = await prisma.news_training.findMany({
     select: { news_id: true },
     where: { news_id: { not: null } },
@@ -30,14 +30,14 @@ export async function getArticles(
       },
       news_training: {
         where: {
-          user_id: userId 
+          user_id: userId,
         },
         select: {
           news_id: true,
           category: true,
-          user_id: true 
-        }
-      }
+          user_id: true,
+        },
+      },
     },
     where:
       trainingType === "classifying"
@@ -99,6 +99,14 @@ export async function getTags() {
 export async function getWidth(
   trainingType: "classifying" | "cleaning" = "cleaning"
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const userId = session.user.id;
+  
   const leftName = `width:training-${trainingType}-left;user:${userId}`;
   const rightName = `width:training-${trainingType}-right;user:${userId}`;
 
