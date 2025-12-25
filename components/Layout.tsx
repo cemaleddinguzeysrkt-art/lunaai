@@ -1,14 +1,24 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ChevronDown, LogOut, Search, Settings, User } from "lucide-react";
+import {
+  ChevronDown,
+  Loader2,
+  LogOut,
+  Search,
+  Settings,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { signOut } from "next-auth/react";
+import { toast } from "sonner";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const currentPath = usePathname();
@@ -22,6 +32,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      toast.success("Signed out successfully", { richColors: true });
+    } catch (error) {
+      toast.error("Failed to signout", { richColors: true });
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white">
@@ -47,7 +69,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               Search
             </a>
             <Link
-              href="/trainings"
+              href="/trainings?type=cleaning"
               className={cn(
                 "transition-colors relative py-5 hover:text-blue-600",
                 currentPath.startsWith("/trainings") && "text-blue-600"
@@ -132,8 +154,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Settings className="w-4 h-4" /> Settings
                 </a>
                 <div className="my-1 border-t border-neutral-100"></div>
-                <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                  <LogOut className="w-4 h-4" /> Sign out
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                >
+                  {signingOut ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <LogOut className="w-4 h-4" />
+                  )}
+                  Sign out
                 </button>
               </div>
             )}

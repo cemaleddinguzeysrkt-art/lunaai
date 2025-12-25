@@ -5,6 +5,7 @@ export async function getCompanies() {
     orderBy: {
       id: "asc",
     },
+    take:50,
     include: {
       company_news: true,
       user:true

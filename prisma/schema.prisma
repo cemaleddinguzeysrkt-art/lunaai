@@ -84,6 +84,7 @@ model news {
   company_news   company_news[]
   news_source    news_source?   @relation(fields: [news_source_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_ibfk_1")
   training       training[]
+  news_training  news_training[]
 
   @@index([news_source_id], map: "source_id")
 }
@@ -133,19 +134,21 @@ model training_target {
 }
 
 model user {
-  id              Int               @id @default(autoincrement())
-  name            String            @db.VarChar(255)
-  created_date    DateTime?         @default(now()) @db.DateTime(0)
-  password        String            @db.VarChar(255)
-  role            String?           @db.VarChar(50)
-  email           String            @db.VarChar(255)
-  company         company[]
-  company_history company_history[]
-  company_note    company_note[]
-  lead            lead[]
-  task            task[]
-  training        training[]
-  training_target training_target[]
+  id                  Int               @id @default(autoincrement())
+  name                String            @db.VarChar(255)
+  created_date        DateTime?         @default(now()) @db.DateTime(0)
+  password            String            @db.VarChar(255)
+  role                String?           @db.VarChar(50)
+  email               String            @db.VarChar(255)
+  passwordResetToken  String?           @db.VarChar(255)
+  passwordResetExpiry DateTime?         @db.DateTime(0)
+  company             company[]
+  company_history     company_history[]
+  company_note        company_note[]
+  lead                lead[]
+  task                task[]
+  training            training[]
+  training_target     training_target[]
 }
 
 model company_note {
@@ -169,6 +172,8 @@ model news_training {
   user_id    Int?
   time_stamp DateTime? @db.DateTime(0)
   feedback   String?   @db.TinyText
+
+  news       news?     @relation(fields: [news_id], references: [id])
 }
 
 model transfer_watermark {

@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function LandingPage() {
   return (
-    <div className="h-full flex flex-col items-center justify-center bg-white relative overflow-hidden">
+    <div className="h-screen flex flex-col items-center justify-center bg-white relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-50 rounded-full blur-3xl opacity-60"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-50 rounded-full blur-3xl opacity-60"></div>
@@ -30,7 +30,7 @@ export default function LandingPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link
-            href="/trainings"
+            href="/trainings?type=cleaning"
             className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-full hover:bg-blue-700 transition-all"
           >
             Go to Trainings

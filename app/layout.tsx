@@ -2,6 +2,7 @@ import React from "react";
 import "./globals.css";
 import Layout from "@/components/Layout";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -30,7 +31,8 @@ export default function RootLayout({
     <html lang="en" className={`${jakarta.variable} ${poppins.variable}`}>
       <head></head>
       <body className="font-sans bg-neutral-50 text-neutral-900 min-h-screen sticky top-0 overflow-y-auto">
-        <Layout>{children}</Layout>
+        {children}
+        <Toaster />
       </body>
     </html>
   );

@@ -1,15 +1,52 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth";
+import { definition as Definition } from "@/app/generated/prisma/client";
 
-export async function getArticles() {
+const session = await getServerSession(authOptions);
+
+if (!session) {
+  throw new Error("Unauthorized");
+}
+
+const userId = session.user.id;
+
+export async function getArticles(
+  trainingType: "classifying" | "cleaning" = "cleaning"
+) {
+  const trainedNewsIds = await prisma.news_training.findMany({
+    select: { news_id: true },
+    where: { news_id: { not: null } },
+  });
+
+  const ids = trainedNewsIds.map((n) => n.news_id!);
+
   const news = await prisma.news.findMany({
-    take:100,
+    take: 50,
     include: {
       news_source: true,
       company_news: {
         include: { company: true },
       },
-      training:true
+      news_training: {
+        where: {
+          user_id: userId 
+        },
+        select: {
+          news_id: true,
+          category: true,
+          user_id: true 
+        }
+      }
     },
+    where:
+      trainingType === "classifying"
+        ? {
+            id: { in: ids },
+          }
+        : {
+            id: { notIn: ids },
+          },
   });
 
   return news;
@@ -26,6 +63,53 @@ export async function getFilters() {
   return {
     categories,
     industries,
+  };
+}
+
+export async function getOrigins() {
+  const origins = await prisma.definition.findMany({
+    where: { name: "Origin" },
+  });
+
+  return {
+    origins,
+  };
+}
+
+export async function getStatuses() {
+  const statuses = await prisma.definition.findMany({
+    where: { name: "Status" },
+  });
+
+  return {
+    statuses,
+  };
+}
+
+export async function getTags() {
+  const tags = await prisma.definition.findMany({
+    where: { name: "Tag" },
+  });
+
+  return {
+    tags,
+  };
+}
+
+export async function getWidth(
+  trainingType: "classifying" | "cleaning" = "cleaning"
+) {
+  const leftName = `width:training-${trainingType}-left;user:${userId}`;
+  const rightName = `width:training-${trainingType}-right;user:${userId}`;
+
+  const [leftDef, rightDef] = await Promise.all([
+    prisma.definition.findFirst({ where: { name: leftName } }),
+    prisma.definition.findFirst({ where: { name: rightName } }),
+  ]);
+
+  return {
+    leftWidth: leftDef as Definition,
+    rightWidth: rightDef as Definition,
   };
 }
 
