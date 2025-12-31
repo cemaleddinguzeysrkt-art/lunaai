@@ -23,6 +23,8 @@ jobs:
           npm install
           npx prisma generate
           npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }} 
 
       # KRİTİK ADIM: Statik dosyaları standalone klasörüne taşıyoruz
       - name: Prepare Standalone Assets
