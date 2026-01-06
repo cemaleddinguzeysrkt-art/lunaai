@@ -35,7 +35,7 @@ export const authOptions: AuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name ?? null,
-          role: user.role,
+          role: user.role ?? "user",
         };
       },
     }),
