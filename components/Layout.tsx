@@ -13,8 +13,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { Skeleton } from "./ui/skeleton";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -22,6 +23,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const currentPath = usePathname();
+  const { data: session, status } = useSession();
+  const isLoadingUser = status === "loading";
+  const isAdmin = session?.user.role === "admin";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -104,56 +108,57 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-neutral-50 transition-colors cursor-pointer border border-transparent hover:border-neutral-100"
-            >
-              <div className="relative">
-                <Image
-                  src="/profile-image.png"
-                  alt="Profile"
-                  width={32}
-                  height={32}
-                  className="rounded-full border border-neutral-200 shadow-sm"
-                />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-              </div>
+            {isLoadingUser ? (
+              <ProfileSkeleton />
+            ) : (
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-neutral-50 transition-colors cursor-pointer border border-transparent hover:border-neutral-100"
+              >
+                <div className="relative">
+                  <Image
+                    src="/profile-image.png"
+                    alt="Profile"
+                    width={32}
+                    height={32}
+                    className="rounded-full border border-neutral-200 shadow-sm"
+                  />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                </div>
 
-              <div className="text-sm font-semibold text-subtitle-dark hidden md:block">
-                Brooklyn Simmons
-              </div>
-              <ChevronDown
-                className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
-                  isUserMenuOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+                <div className="text-sm font-semibold text-subtitle-dark hidden md:block">
+                  {session?.user.name || "User Name"}
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
+                    isUserMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            )}
 
             {/* user profile menus */}
             {isUserMenuOpen && (
               <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-neutral-100 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                 <div className="px-4 py-3 border-b border-neutral-100 mb-1">
                   <p className="text-sm font-semibold text-neutral-900">
-                    Brooklyn Simmons
+                    {session?.user.name || "User Name"}
                   </p>
                   <p className="text-xs text-neutral-500 truncate">
-                    brooklyn@luna-ai.com
+                    {session?.user.email || ""}
                   </p>
                 </div>
-
-                <a
-                  href="#"
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-blue-600 transition-colors"
-                >
-                  <User className="w-4 h-4" /> Profile
-                </a>
-                <a
-                  href="#"
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-blue-600 transition-colors"
-                >
-                  <Settings className="w-4 h-4" /> Settings
-                </a>
-                <div className="my-1 border-t border-neutral-100"></div>
+                {isAdmin && (
+                  <>
+                    <Link
+                      href="/users"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-blue-600 transition-colors"
+                    >
+                      <Settings className="w-4 h-4" /> Settings
+                    </Link>
+                    <div className="my-1 border-t border-neutral-100"></div>
+                  </>
+                )}
                 <button
                   onClick={handleSignOut}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
@@ -177,3 +182,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+const ProfileSkeleton = () => (
+  <div className="flex gap-2 items-center">
+    {/* Avatar skeleton */}
+    <Skeleton className="h-8 w-8 rounded-full" />
+
+    {/* Name skeleton (hidden on mobile just like real text) */}
+    <Skeleton className="h-8 w-32 hidden md:block" />
+
+    <Skeleton className="h-4 w-4 rounded-full" />
+  </div>
+);

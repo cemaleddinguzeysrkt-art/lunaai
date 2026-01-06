@@ -6,7 +6,11 @@ import {
   TRAINING_COLORS,
   TRAINING_COLORS_LIGHT,
 } from "@/lib/data/news-data";
-import { ArticlesArrayType, ArticleType } from "@/lib/types/news-types";
+import {
+  ArticlesArrayType,
+  ArticleType,
+  TrainedArticleType,
+} from "@/lib/types/news-types";
 import { formatDate } from "@/lib/utils";
 import {
   Check,
@@ -30,6 +34,7 @@ import { insertCleaningFeedback } from "@/lib/actions/cleaningFeedbackAction";
 import { applyTrainingFilters } from "@/lib/actions/trainingCategoryAction";
 import Link from "next/link";
 import { fetchNextCenterNews } from "@/lib/queries/client-queries/newsClient";
+import { WeeklyTargetProgress } from "@/lib/queries/user";
 
 interface ArticleReviewProps {
   articles: ArticlesArrayType;
@@ -41,6 +46,7 @@ interface ArticleReviewProps {
   leftWidth: Definition;
   rightWidth: Definition;
   feedbacks: string[];
+  weeklyTargetProgress: WeeklyTargetProgress;
 }
 
 export default function ArticleReview({
@@ -53,6 +59,7 @@ export default function ArticleReview({
   leftWidth,
   rightWidth,
   feedbacks,
+  weeklyTargetProgress,
 }: ArticleReviewProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -111,8 +118,14 @@ export default function ArticleReview({
   // const centerArticle =
   //   articles.find((a) => a.id === activeArticleId) || articles[0];
   const [articlesList, setArticlesList] = useState<ArticlesArrayType>(articles);
-  const [centerArticle, setCenterArticle] = useState<ArticleType | null>(null);
-  // const [centerArticleId, setCenterArticleId] = useState<number>(null);
+  const [centerArticle, setCenterArticle] = useState<
+    ArticleType | TrainedArticleType | null
+  >(null);
+  const [trainedCenterArticle, setTrainedCenterArticle] =
+    useState<TrainedArticleType | null>(null);
+  const [centerArticleType, setCenterArticleType] = useState<
+    "trained" | "untrained"
+  >("untrained");
   const [loadingNextCenterNews, setLoadingNextCenterNews] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
@@ -130,6 +143,11 @@ export default function ArticleReview({
     const params = new URLSearchParams(searchParams.toString());
     params.set("type", trainingPageType);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+
+    const currentCenterType = searchParams.get("trainedActiveNews")
+      ? "trained"
+      : "untrained";
+    setCenterArticleType(currentCenterType);
   }, [trainingPageType, router, pathname, searchParams]);
 
   useEffect(() => {
@@ -477,28 +495,6 @@ export default function ArticleReview({
     });
   };
 
-  // useEffect(() => {
-  //   if (trainingPageType !== "classifying") return;
-
-  //   const categoryString = centerArticle?.news_training[0]?.category ?? "";
-
-  //   if (!categoryString) {
-  //     setCheckedFilters({});
-  //     return;
-  //   }
-
-  //   const hydrated: Record<string, boolean> = {};
-
-  //   categoryString.split(",").forEach((id) => {
-  //     const cleanId = id.trim();
-  //     if (cleanId) hydrated[`Category-${cleanId}`] = true;
-  //   });
-
-  //   setCheckedFilters(hydrated);
-  //   console.log("hydrrr checkkk", categories, industries);
-  //   console.log("hydrrr", hydrated);
-  // }, [centerArticle, trainingPageType]);
-
   useEffect(() => {
     const element = articleListRefs.current.get(centerArticle?.id as number);
     if (element) {
@@ -519,10 +515,43 @@ export default function ArticleReview({
     );
   }, [articles, searchParams, pathname, router]);
 
+  useEffect(() => {
+    if (trainingPageType !== "classifying") return;
+
+    const training = (centerArticle as TrainedArticleType)?.news_training;
+    const categoryString =
+      training && training.length > 0 ? training[0].category ?? "" : "";
+
+    // const categoryString = (centerArticle as TrainedArticleType)?.news_training[0]?.category ?? "";
+
+    if (!categoryString) {
+      setCheckedFilters({});
+      return;
+    }
+
+    const hydrated: Record<string, boolean> = {};
+
+    categoryString.split(",").forEach((id) => {
+      const cleanId = id.trim();
+      if (cleanId) hydrated[`Category-${cleanId}`] = true;
+    });
+
+    setCheckedFilters(hydrated);
+    console.log("hydrrr checkkk", categories, industries);
+    console.log("hydrrr", hydrated);
+  }, [centerArticle, trainingPageType]);
+
   const handleSetActiveNews = (articleId: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("activeNews", articleId.toString());
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handleClickTrainedNews = (article: TrainedArticleType) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("activeNews", article.id.toString());
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    setCenterArticle(article);
   };
 
   return (
@@ -616,17 +645,33 @@ export default function ArticleReview({
             </Button>
           </div>
 
-          <div className="flex items-center border-l-2 border-border-dark">
-            <div className="flex items-center gap-2 px-2">
+          <div className="flex items-center">
+            <div className="h-11 w-[1.5px] bg-neutral-200 mx-[7.5px]"></div>
+            <div className="flex items-center gap-2 px-4">
               <div className="w-14.5 mx-1 h-1.5 bg-neutral-300 rounded-full overflow-hidden">
-                <div className="w-[30%] h-full bg-blue-600 rounded-full"></div>
+                <div
+                  style={{
+                    width: `${
+                      weeklyTargetProgress.totalTargets
+                        ? (weeklyTargetProgress.completedTargets! /
+                            weeklyTargetProgress.totalTargets) *
+                          100
+                        : 0
+                    }%`,
+                  }}
+                  className="h-full bg-blue-600 rounded-full"
+                ></div>
               </div>
               <div className="flex items-center text-xs font-semibold tracking-wide">
-                <span className="text-neutral-600">5</span>
-                <span className="text-neutral-900/40">/50</span>
+                <span className="text-neutral-600">
+                  {weeklyTargetProgress.completedTargets ?? 0}
+                </span>
+                <span className="text-neutral-900/40">
+                  /{weeklyTargetProgress.totalTargets ?? 0}
+                </span>
               </div>
             </div>
-            <div className="h-11 w-[1.5px] bg-neutral-200 mx-[7.5px]"></div>
+            {/* <div className="h-11 w-[1.5px] bg-neutral-200 mx-[7.5px]"></div>
             <div className="flex items-center text-subtitle-dark text-xs font-semibold gap-1 px-1">
               <Button
                 variant="ghost"
@@ -643,7 +688,7 @@ export default function ArticleReview({
               >
                 <CirclePlus size={14} />
               </Button>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -658,7 +703,10 @@ export default function ArticleReview({
             // maxWidth: 400,
           }}
         >
-          <div className="flex-1 overflow-y-auto py-4  space-y-4 scrollbar-custom " ref={articlesScrollContainerRef}>
+          <div
+            className="flex-1 overflow-y-auto py-4  space-y-4 scrollbar-custom "
+            ref={articlesScrollContainerRef}
+          >
             {articlesList && articlesList.length > 0 ? (
               articlesList.map((article, idx) => {
                 const colorClass = articleColors[article.id]?.normal ?? "";
@@ -677,7 +725,7 @@ export default function ArticleReview({
                     className="flex flex-col items-center gap-2 scroll-mt-2"
                   >
                     <div
-                      onClick={() => handleSetActiveNews(article.id)}
+                      onClick={() => handleClickTrainedNews(article)}
                       className={`
                   py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs min-w-[153px] w-[78%]
                   ${colorClass}
@@ -733,14 +781,17 @@ export default function ArticleReview({
             className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom"
           >
             <div
-              className={`my-6 rounded-3xl border-6 shadow-sm h-fit w-[93%] `}
+              className={`my-6 rounded-3xl border-6 shadow-sm h-fit w-[93%] ${
+                articleColors[centerArticle.id]?.light ?? ""
+              }`}
             >
               <div
-                className={`bg-white min-h-full p-12 shadow-sm relative border-x rounded-[18px] border`}
+                className={`bg-white min-h-full p-12 shadow-sm relative border-x rounded-[18px] border ${
+                  articleColors[centerArticle.id]?.normal ?? ""
+                }`}
               >
                 <div className="text-title-red font-bold text-sm tracking-wider uppercase px-2 py-1 mb-2 rounded w-fit ml-auto">
-                  {centerArticle.company_news[0]?.company?.name ||
-                    "Unknown Company"}
+                  {centerArticle.company_news[0]?.company?.name || "-"}
                 </div>
 
                 <div className="mb-6 mt-2">
@@ -804,6 +855,80 @@ export default function ArticleReview({
             No news selected
           </div>
         )}
+
+        {/* article content
+        {(trainedCenterArticle && centerArticleType === "trained") ? (
+          <section
+            ref={scrollContainerRef}
+            className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom"
+          >
+            <div
+              className={`my-6 rounded-3xl border-6 shadow-sm h-fit w-[93%] `}
+            >
+              <div
+                className={`bg-white min-h-full p-12 shadow-sm relative border-x rounded-[18px] border`}
+              >
+                <div className="text-title-red font-bold text-sm tracking-wider uppercase px-2 py-1 mb-2 rounded w-fit ml-auto">
+                  {trainedCenterArticle.company_news[0]?.company?.name || "-"}
+                </div>
+
+                <div className="mb-6 mt-2">
+                  <h1 className="text-xl font-bold text-title-dark mb-4 leading-tight">
+                    {trainedCenterArticle.header}
+                  </h1>
+                  <div className="flex items-center flex-wrap gap-x-2 gap-y-2 text-sm text-neutral-500">
+                    <span className="font-bold text-subtitle-dark text-sm">
+                      {trainedCenterArticle.news_source?.name ??
+                        "Unknown Source"}
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 "></span>
+                    <span className="text-subtitle-dark font-medium text-sm">
+                      {formatDate(trainedCenterArticle.published_date)}
+                    </span>
+                  </div>
+                </div>
+
+                <div ref={contentRef}>
+                  <div className="prose prose-sm max-w-none text-title-dark/90 text-sm leading-8 selection:bg-blue-100 selection:text-blue-900 whitespace-pre-wrap">
+                    {formattedActiveArticleContent ?? ""}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {selectionRect && (
+              <div
+                className="fixed z-100 bg-white text-title-dark shadow-xl px-3 py-1.5 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-200 border border-gray-300 rounded-md"
+                style={{
+                  top: `${selectionRect.top - 48}px`,
+                  left: `${selectionRect.left + selectionRect.width / 2}px`,
+                  transform: "translateX(-50%)",
+                }}
+              >
+                <span className="text-xs font-semibold font-mono">
+                  {selectedWordCount ?? 0}
+                </span>
+                <div className="h-3 w-px bg-neutral-400"></div>
+                <button
+                  onClick={handleSelectText}
+                  className="text-xs font-bold text-blue-500 hover:text-blue-700 cursor-pointer"
+                >
+                  Select
+                </button>
+
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45"></div>
+              </div>
+            )}
+          </section>
+        ) : loadingNextCenterNews ? (
+          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
+            <Loader2 className="animate-spin size-5" />
+          </div>
+        ) : (
+          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
+            No news selected
+          </div>
+        )} */}
 
         {/* filters */}
         <aside
@@ -946,9 +1071,7 @@ export default function ArticleReview({
                   Notes
                 </h3>
                 {notes?.length === 0 ? (
-                  <p className="text-neutral-500 text-sm text-center">
-                    No notes yet.
-                  </p>
+                  <p className="text-neutral-500 text-sm text-center">-</p>
                 ) : (
                   <ul className="space-y-2">
                     {notes.map((note, i) => (

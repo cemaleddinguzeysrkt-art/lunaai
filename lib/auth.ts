@@ -32,7 +32,7 @@ export const authOptions: AuthOptions = {
 
         const email = credentials.email.toLowerCase().trim();
 
-        const user = await prisma.user.findFirst({
+        const user = await prisma.user.findUnique({
           where: { email },
         });
 
@@ -46,6 +46,7 @@ export const authOptions: AuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name ?? null,
+          role: user.role ?? "user",
         };
       },
     }),
@@ -82,17 +83,20 @@ export const authOptions: AuthOptions = {
     },
     async jwt({ token, user, account }) {
       // Initial sign in
-      if (account && user) {
-        // If the user came from Azure AD (or any provider), try to find them in OUR db by email
-        if (user.email) {
+      if (user) {
+        if (account?.provider === "azure-ad" && user.email) {
           const dbUser = await prisma.user.findFirst({
             where: { email: user.email },
           });
 
           if (dbUser) {
             console.log(`[Auth] Linked Azure AD user ${user.email} to DB User ID ${dbUser.id}`);
-            token.id = dbUser.id; // SWAP the String ID for the Integer ID
+            token.id = dbUser.id;
+            token.role = dbUser.role ?? "user";
           }
+        } else {
+          token.id = user.id as number;
+          token.role = user.role;
         }
       }
       return token;
@@ -100,6 +104,7 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as number;
+        session.user.role = token.role;
       }
       return session;
     },
