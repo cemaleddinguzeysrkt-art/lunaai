@@ -19,11 +19,31 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
+
+  React.useEffect(() => {
+    // Check if we have already tried to auto-login this session
+    const hasTried = sessionStorage.getItem("tried_entra_auto_login");
+
+    if (!hasTried) {
+      // First visit: Try to auto-login with Azure AD
+      console.log("Attempting auto-login with Entra ID...");
+      setAutoLoginAttempted(true);
+      setLoading(true);
+      sessionStorage.setItem("tried_entra_auto_login", "true");
+      
+      // Attempt sign in
+      signIn("azure-ad", { callbackUrl: "/trainings?type=cleaning" });
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    // Clear the auto-login flag on manual attempt so it retries next time they visit fresh
+    sessionStorage.removeItem("tried_entra_auto_login");
 
     const res = await signIn("credentials", {
       email,
@@ -41,6 +61,15 @@ const LoginPage = () => {
 
     router.push("/trainings?type=cleaning");
   };
+
+  if (autoLoginAttempted) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#f8f9fc]">
+        <Loader2 className="size-10 animate-spin text-blue-600 mb-4" />
+        <p className="text-gray-500 font-medium">Checking corporate credentials...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#f8f9fc] p-4">
