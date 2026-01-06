@@ -32,13 +32,13 @@ const LoginPage = () => {
     });
 
     setLoading(false);
-    toast.success("Logged in successfully", { richColors: true });
-
+    
     if (res?.error) {
       toast.error("Invalid email or password", { richColors: true });
       return;
     }
 
+    toast.success("Logged in successfully", { richColors: true });
     router.push("/trainings?type=cleaning");
   };
 
@@ -118,12 +118,12 @@ const LoginPage = () => {
               </span>
             </label>
 
-            <Link
+            {/* <Link
               href="/auth/forgot-password"
               className="cursor-pointer text-[14px] font-medium text-[#475569] hover:text-[#1a56ff] transition-colors"
             >
               Forgot password?
-            </Link>
+            </Link> */}
           </div>
           <Button type="submit" className="w-full text-sm cursor-pointer flex items-center gap-2" disabled={loading}>
             {loading && <Loader2 className="size-4 animate-spin"/>}

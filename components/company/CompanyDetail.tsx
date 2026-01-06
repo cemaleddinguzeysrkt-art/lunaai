@@ -73,18 +73,6 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
                 </div>
               </div>
             </div>
-            <div className="flex gap-1 items-center text-subtitle-dark">
-              <button className="p-1 hover:bg-neutral-50 rounded-lg cursor-pointer">
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button className="p-1  hover:bg-neutral-50 rounded-lg cursor-pointer">
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <div className="w-px h-4 bg-neutral-300" />
-              <button className="p-1 hover:bg-neutral-50 rounded-lg cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
           </div>
 
           <div className="flex items-center gap-3 p-3 bg-bg-main rounded-lg border border-blue-50 h-11">

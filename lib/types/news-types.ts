@@ -1,5 +1,9 @@
 import { user as User } from "@/app/generated/prisma/client";
-import { getArticles, getNextCenterNews, getTrainings } from "../queries/article";
+import {
+  getArticles,
+  getNextCenterNews,
+  getTrainings,
+} from "../queries/article";
 import { getCompanies, getCompanyNewses } from "../queries/company";
 
 export interface FilterGroup {
@@ -17,6 +21,7 @@ export type CompanyNewsItem = {
 };
 
 export type ArticlesArrayType = Awaited<ReturnType<typeof getArticles>>;
+export type TrainedArticleType = ArticlesArrayType extends (infer T)[] ? T : never;
 export type ArticleType = Awaited<ReturnType<typeof getNextCenterNews>>;
 export type NewsesArrayType = Awaited<ReturnType<typeof getCompanyNewses>>;
 export type TrainingsArrayType = Awaited<ReturnType<typeof getTrainings>>;

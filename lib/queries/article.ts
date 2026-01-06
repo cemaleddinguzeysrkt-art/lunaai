@@ -37,6 +37,7 @@ export async function getArticles(
           category: true,
           user_id: true,
           like: true,
+          feedback: true,
         },
       },
     },

@@ -139,7 +139,7 @@ model user {
   created_date        DateTime?         @default(now()) @db.DateTime(0)
   password            String            @db.VarChar(255)
   role                String?           @db.VarChar(50)
-  email               String            @db.VarChar(255)
+  email               String            @unique(map: "unique_email_idx") @db.VarChar(255)
   passwordResetToken  String?           @db.VarChar(255)
   passwordResetExpiry DateTime?         @db.DateTime(0)
   company             company[]

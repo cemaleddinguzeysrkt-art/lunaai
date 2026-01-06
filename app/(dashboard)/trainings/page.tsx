@@ -8,6 +8,7 @@ import {
   getTags,
   getWidth,
 } from "@/lib/queries/article";
+import { getWeeklyTargetProgress } from "@/lib/queries/user";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function TrainingsPage({
   searchParams: Promise<{
     type?: "classifying" | "cleaning";
     activeNews: number;
+    trainedActiveNews: number;
   }>;
 }) {
   const resolvedSearchParams = await searchParams;
@@ -28,7 +30,11 @@ export default async function TrainingsPage({
     ? Number(resolvedSearchParams.activeNews)
     : null;
 
-  const [articles, filters, origins, statuses, tags, initialWidth, feedbacks] =
+  const trainedActiveNewsId = resolvedSearchParams.trainedActiveNews
+    ? Number(resolvedSearchParams.trainedActiveNews)
+    : null;
+
+  const [articles, filters, origins, statuses, tags, initialWidth, feedbacks, weeklyTargetProgress] =
     await Promise.all([
       getArticles(trainingType),
       getFilters(),
@@ -37,6 +43,7 @@ export default async function TrainingsPage({
       getTags(),
       getWidth(trainingType),
       activeNewsId ? getFeedbacks(activeNewsId) : Promise.resolve([]),
+      getWeeklyTargetProgress(trainingType),
     ]);
 
   return (
@@ -51,6 +58,7 @@ export default async function TrainingsPage({
       leftWidth={initialWidth.leftWidth}
       rightWidth={initialWidth.rightWidth}
       feedbacks={feedbacks}
+      weeklyTargetProgress={weeklyTargetProgress}
     />
   );
 }
