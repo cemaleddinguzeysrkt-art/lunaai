@@ -50,19 +50,50 @@ export const authOptions: AuthOptions = {
       try {
         if (account?.provider === "azure-ad") {
           console.log("[Auth] Azure AD SignIn Initiated", { 
-            user: { id: user?.id, email: user?.email, name: user?.name },
-            account: { provider: account?.provider, type: account?.type },
-            profile: profile ? "Profile data present" : "No profile data"
+            email: user?.email,
+            name: user?.name
           });
+
+          const email = user.email?.toLowerCase();
+          if (!email) return false;
+
+          // Enforce: User MUST exist in our DB
+          const dbUser = await prisma.user.findFirst({
+            where: { email },
+          });
+
+          if (!dbUser) {
+            console.warn(`[Auth] Access Denied: Email ${email} not found in database.`);
+            return false; 
+          }
+
+          console.log(`[Auth] Access Granted: User ${email} matched to DB ID ${dbUser.id}`);
         }
-        return true; // Always allow access
+        return true; 
       } catch (error) {
-        console.error("[Auth] CRITICAL ERROR in signIn callback (Logged only, allowing access):", error);
-        return true; // Fail safe by allowing access even on system error per instruction
+        console.error("[Auth] CRITICAL ERROR in signIn callback:", error);
+        return false; // Deny on error for security
       }
     },
-    async jwt({ token, user }) {
-      if (user) token.id = user.id as number;
+    async jwt({ token, user, account }) {
+      // Initial sign in
+      if (account && user) {
+        // If the user came from Azure AD (or any provider), try to find them in OUR db by email
+        if (user.email) {
+          const dbUser = await prisma.user.findFirst({
+            where: { email: user.email },
+          });
+
+          if (dbUser) {
+            console.log(`[Auth] Linked Azure AD user ${user.email} to DB User ID ${dbUser.id}`);
+            token.id = dbUser.id; // SWAP the String ID for the Integer ID
+          } else {
+             // Optional: If they don't exist in DB, you could create them here, 
+             // or keep the string ID (which will return empty data as per your safety checks).
+             token.id = user.id;
+          }
+        }
+      }
       return token;
     },
     async session({ session, token }) {
