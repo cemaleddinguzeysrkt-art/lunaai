@@ -21,9 +21,9 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 import { definition as Definition } from "@/app/generated/prisma/client";
-import { createCompany } from "@/lib/actions/createCompanyAction";
+import { createCompany, editCompany } from "@/lib/actions/createCompanyAction";
 import { toast } from "sonner";
-import { ArticlesArrayType } from "@/lib/types/news-types";
+import { ArticlesArrayType, CompanyType } from "@/lib/types/news-types";
 
 interface CompanyData {
   name: string;
@@ -43,6 +43,9 @@ interface CompanyModalProps {
   statuses: Definition[];
   tags: Definition[];
   activeNewsUrl: string;
+  editingCompany?: CompanyType | null;
+  onAdd?: (addedCompany: CompanyType) => void;
+  onEdit?: (editedCompany: CompanyType) => void;
 }
 
 const AddCompanyModal: React.FC<CompanyModalProps> = ({
@@ -52,6 +55,9 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
   statuses,
   tags,
   activeNewsUrl,
+  editingCompany,
+  onAdd,
+  onEdit,
 }) => {
   const [formData, setFormData] = useState<CompanyData>({
     name: "",
@@ -67,6 +73,8 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
   const [isSavingCompany, setSavingCompany] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const tagMenuRef = useRef<HTMLDivElement>(null);
+
+  const isEditMode = !!editingCompany;
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -103,6 +111,37 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
     }
   }, [activeNewsUrl, open]);
 
+  useEffect(() => {
+    if (open && editingCompany) {
+      console.log("edddddddd", editingCompany);
+      const validTagIds =
+        typeof editingCompany.tags === "string"
+          ? editingCompany.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter((id) => tags.some((tag) => tag.id.toString() === id))
+          : [];
+
+      setFormData({
+        name: editingCompany.name ?? "",
+        url: editingCompany?.website ?? "",
+        status: editingCompany.status_id?.toString() ?? "",
+        origin: editingCompany.origin_id?.toString() ?? "",
+        notes: editingCompany.company_note?.length
+          ? (editingCompany.company_note.map((note) => note.note) as string[])
+          : [""],
+        resourceUrls: editingCompany.company_news?.length
+          ? (editingCompany.company_news.map(
+              (news) => news.news?.url
+            ) as string[])
+          : [activeNewsUrl || ""],
+        tags:validTagIds
+      });
+
+      setErrors({});
+    }
+  }, [open, editingCompany]);
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -117,28 +156,27 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) newErrors.name = "Company name is required.";
-    if (!formData.url.trim()) newErrors.url = "URL is required.";
-    else if (!/^https?:\/\/.+/.test(formData.url))
-      newErrors.url = "Enter a valid URL (must start with http or https).";
+    // if (!formData.url.trim()) newErrors.url = "URL is required.";
+    // else if (!/^https?:\/\/.+/.test(formData.url))
+    //   newErrors.url = "Enter a valid URL (must start with http or https).";
 
     if (!formData.status) newErrors.status = "Select a status.";
     if (!formData.origin) newErrors.origin = "Select an origin.";
-
     // Notes
-    if (!formData.notes || formData.notes.length === 0)
-      newErrors.notes = "At least one note is required.";
-    else if (formData.notes.some((n) => !n.trim()))
-      newErrors.notes = "All notes must have text.";
+    // if (!formData.notes || formData.notes.length === 0)
+    //   newErrors.notes = "At least one note is required.";
+    // else if (formData.notes.some((n) => !n.trim()))
+    //   newErrors.notes = "All notes must have text.";
 
     // Resource URLs
-    if (!formData.resourceUrls || formData.resourceUrls.length === 0)
-      newErrors.resourceUrls = "At least one resource URL is required.";
-    else if (formData.resourceUrls.some((u) => !/^https?:\/\/.+/.test(u)))
-      newErrors.resourceUrls = "All resource URLs must be valid.";
+    // if (!formData.resourceUrls || formData.resourceUrls.length === 0)
+    //   newErrors.resourceUrls = "At least one resource URL is required.";
+    // else if (formData.resourceUrls.some((u) => !/^https?:\/\/.+/.test(u)))
+    //   newErrors.resourceUrls = "All resource URLs must be valid.";
 
     // Tags
-    if (!formData.tags || formData.tags.length === 0)
-      newErrors.tags = "Select at least one tag.";
+    // if (!formData.tags || formData.tags.length === 0)
+    //   newErrors.tags = "Select at least one tag.";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -211,20 +249,53 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
     }));
   };
 
+  // const handleSave = async () => {
+  //   if (!validateForm()) {
+  //     toast.error("Please fix the errors before saving.", { richColors: true });
+  //     return;
+  //   }
+  //   setSavingCompany(true);
+  //   console.log("formmmmm", formData);
+  //   try {
+  //     await createCompany(formData);
+  //     onClose();
+  //     toast.success("Company created successfully", { richColors: true });
+  //   } catch (err) {
+  //     toast.error("Failed to create company", { richColors: true });
+  //     console.log("errrrrr", err);
+  //   } finally {
+  //     setSavingCompany(false);
+  //   }
+  // };
+
   const handleSave = async () => {
     if (!validateForm()) {
       toast.error("Please fix the errors before saving.", { richColors: true });
       return;
     }
+
     setSavingCompany(true);
-    console.log("formmmmm", formData);
+
     try {
-      await createCompany(formData);
+      if (isEditMode && editingCompany?.id) {
+        const updatedCompany = await editCompany(formData, editingCompany.id);
+        toast.success("Company updated successfully", { richColors: true });
+        onEdit && onEdit(updatedCompany);
+      } else {
+        const addedCompany = await createCompany(formData);
+        toast.success("Company created successfully", { richColors: true });
+        onAdd && onAdd(addedCompany);
+      }
+
       onClose();
-      toast.success("Company created successfully", { richColors: true });
     } catch (err) {
-      toast.error("Failed to create company", { richColors: true });
-      console.log("errrrrr", err);
+      toast.error(
+        isEditMode
+          ? `Failed to update company, please fix the errors before saving`
+          : "Failed to create company, please fix the errors before saving",
+        { richColors: true }
+      );
+      console.log("company save error", err);
     } finally {
       setSavingCompany(false);
     }
@@ -251,7 +322,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
       <DialogContent className="min-w-[674px] max-h-[90vh] px-0 flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-semibold text-lg px-5">
-            Add Company
+            {editingCompany ? "Edit Company" : "Add Company"}
           </DialogTitle>
         </DialogHeader>
 
@@ -302,6 +373,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
                   setFormData((prev) => ({ ...prev, status: value }));
                   setErrors((prev) => ({ ...prev, status: "" }));
                 }}
+                value={formData.status}
               >
                 <SelectTrigger
                   className={`w-full ${errors.status ? "border-danger!" : ""}`}
@@ -336,6 +408,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
                   setFormData((prev) => ({ ...prev, origin: value }));
                   setErrors((prev) => ({ ...prev, origin: "" }));
                 }}
+                value={formData.origin}
               >
                 <SelectTrigger
                   className={`w-full ${errors.origin ? "border-danger!" : ""}`}
@@ -468,7 +541,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
                         key={tagId}
                         className="inline-flex items-center gap-1 border border-gray-200 rounded-sm px-2 py-1 text-xs font-medium text-subtitle-dark"
                       >
-                        {tagDef?.value ?? "Unknown"}
+                        {tagDef?.value}
                         <span
                           onClick={(e) => {
                             e.stopPropagation();

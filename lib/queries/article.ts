@@ -1,3 +1,4 @@
+import { training } from "./../../app/generated/prisma/index.d";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth";
@@ -14,12 +15,20 @@ export async function getArticles(
 
   const userId = session.user.id;
 
-  const trainedNewsIds = await prisma.news_training.findMany({
+  const trainedCleaningNewsIds = await prisma.news_training.findMany({
     select: { news_id: true },
-    where: { news_id: { not: null }, user_id:userId },
+    where: { news_id: { not: null }, user_id: userId },
   });
 
-  const ids = trainedNewsIds.map((n) => n.news_id!);
+  const trainedClassifyingNewsIds = await prisma.news_training.findMany({
+    select: { news_id: true },
+    where: { news_id: { not: null }, user_id: userId, category: { not: null } },
+  });
+
+  const ids =
+    trainingType === "cleaning"
+      ? trainedCleaningNewsIds.map((n) => n.news_id!)
+      : trainedClassifyingNewsIds.map((n) => n.news_id!);
 
   const news = await prisma.news.findMany({
     take: 50,
@@ -44,7 +53,7 @@ export async function getArticles(
     where: {
       id: { in: ids },
     },
-    orderBy:{id:"desc"}
+    orderBy: { id: "desc" },
   });
 
   return news;
@@ -150,7 +159,7 @@ export async function getNextCenterNews() {
 
   const userId = session.user.id;
 
-  const nextNews = await prisma.news.findFirst({
+  const nextCleaningNews = await prisma.news.findFirst({
     where: {
       NOT: {
         news_training: {
@@ -165,5 +174,46 @@ export async function getNextCenterNews() {
     },
   });
 
-  return nextNews ?? null;
+  return nextCleaningNews;
+}
+
+export async function getNextClassifyingNews() {
+  const session = await getServerSession(authOptions);
+  if (!session) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+
+  const nextClassifyingNews = await prisma.news_training.findFirst({
+    where: {
+      like: {
+        equals: 3,
+      },
+      category: null,
+      user_id: userId,
+    },
+    include: { news: true },
+  });
+
+  if (!nextClassifyingNews) {
+    return null; 
+  }
+
+  const nextNews = await prisma.news.findFirst({
+    where: {
+      id: nextClassifyingNews?.news_id as number,
+    },
+    orderBy: { id: "asc" },
+    include: {
+      company_news: { include: { company: true } },
+      news_source: true,
+      news_training: {
+        where: {
+          id: nextClassifyingNews?.id,
+          user_id: userId,
+        },
+      },
+    },
+  });
+
+  return nextNews;
 }

@@ -21,6 +21,7 @@ model company {
   company_news    company_news[]
   company_note    company_note[]
   lead            lead[]
+  task            task[]
 
   @@index([user_id], map: "user_id")
 }
@@ -96,15 +97,16 @@ model news_source {
 }
 
 model task {
-  id            Int          @id @default(autoincrement())
-  short_list_id Int?
-  status        task_status?
-  due_date      DateTime?    @db.DateTime(0)
-  user_id       Int?
-  user          user?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "task_ibfk_2")
+  id       Int          @id @default(autoincrement())
+  comp_id  Int?
+  status   task_status?
+  due_date DateTime?    @db.DateTime(0)
+  user_id  Int?
+  company  company?     @relation(fields: [comp_id], references: [id], onDelete: Cascade, map: "task_ibfk_1")
+  user     user?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "task_ibfk_2")
 
-  @@index([short_list_id], map: "short_list_id")
   @@index([user_id], map: "user_id")
+  @@index([comp_id], map: "comp_id")
 }
 
 model training {
