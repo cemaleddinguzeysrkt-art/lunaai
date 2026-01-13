@@ -273,7 +273,7 @@ export default function Companies({
       </div>
 
       {/* company details panel */}
-      {activeCompany && <CompanyDetail activeCompany={activeCompany} tasks={tasks}/>}
+      {activeCompany && <CompanyDetail statusName={statuses.find(st => st.id == activeCompany.status_id)?.value} originName={origins.find(or => or.id == activeCompany.origin_id)?.value} activeCompany={activeCompany} tasks={tasks}/>}
 
       {/* Add company dialog */}
       <AddCompanyModal

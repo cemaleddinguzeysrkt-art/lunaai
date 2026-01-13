@@ -13,7 +13,11 @@ export async function getCompanies() {
         },
       },
       user: true,
-      company_note: true,
+      company_note: {
+        include:{
+          user:true
+        }
+      },
     },
   });
 

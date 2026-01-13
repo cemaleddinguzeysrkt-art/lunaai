@@ -140,12 +140,15 @@ export async function getArticles(
       user_id: userId,
       news_id: { not: null },
       news: {
-        news_source_id: sourceId,
+        is: {
+          news_source_id: sourceId,
+          invalid: 0,
+        },
       },
       ...(trainingType === "classifying" ? { category: { not: null } } : {}),
     },
     orderBy: {
-      id: "desc", 
+      id: "desc",
     },
     include: {
       news: {
@@ -301,6 +304,7 @@ export async function getNextCenterNews() {
     _max: { id: true },
     where: {
       news_source_id: sourceId,
+      invalid: 0,
     },
   });
 
@@ -378,6 +382,12 @@ export async function getNextClassifyingNews() {
       },
       category: null,
       user_id: userId,
+      news: {
+        is: {
+          news_source_id: sourceId,
+          invalid: 0,
+        },
+      },
     },
     include: { news: true },
   });

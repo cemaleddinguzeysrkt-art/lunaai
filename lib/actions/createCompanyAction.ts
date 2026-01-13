@@ -57,7 +57,11 @@ export async function createCompany(input: CreateCompanyType) {
         },
       },
       user: true,
-      company_note: true,
+      company_note: {
+        include:{
+          user:true
+        }
+      },
     },
   });
 }
@@ -116,7 +120,11 @@ export async function editCompany(input: CreateCompanyType, companyId: number) {
         },
       },
       user: true,
-      company_note: true,
+      company_note: {
+        include:{
+          user:true
+        }
+      },
     },
   });
 }
