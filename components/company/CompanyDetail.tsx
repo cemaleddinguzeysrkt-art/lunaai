@@ -24,9 +24,13 @@ import AddTaskModal from "./AddTaskModal";
 const CompanyDetail = ({
   activeCompany,
   tasks: initialTasks,
+  statusName,
+  originName,
 }: {
   activeCompany: CompanyType;
   tasks: SingleTaskType[];
+  statusName?: string | null;
+  originName?: string | null;
 }) => {
   const [loadinNewses, setLoadinNewses] = useState(false);
   const [tasks, setTasks] = useState<SingleTaskType[]>(initialTasks);
@@ -79,18 +83,34 @@ const CompanyDetail = ({
               <h1 className="text-xl font-bold text-subtitle-dark mb-1">
                 {activeCompany.name}
               </h1>
-              <div className="flex items-center gap-3 text-sm font-medium text-subtitle-dark">
-                <span>{formatDate(activeCompany.created_date)}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
-                <div className="flex items-center gap-1.5">
-                  <Image
-                    src="/profile-image.png"
-                    alt="Profile"
-                    width={16}
-                    height={16}
-                    className="rounded-full"
-                  />
-                  <span>{activeCompany?.user?.name}</span>
+              <div className="flex items-center gap-16">
+                <div className="flex items-center gap-3 text-sm font-medium text-subtitle-dark">
+                  <span>{formatDate(activeCompany.created_date)}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
+                  <div className="flex items-center gap-1.5">
+                    <Image
+                      src="/profile-image.png"
+                      alt="Profile"
+                      width={16}
+                      height={16}
+                      className="rounded-full"
+                    />
+                    <span>{activeCompany?.user?.name}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm font-medium text-subtitle-dark">
+                  {statusName && (
+                    <div>
+                      Status:{" "}
+                      <span className="font-semibold">{statusName}</span>
+                    </div>
+                  )}
+                  {originName && (
+                    <div>
+                      Origin:{" "}
+                      <span className="font-semibold">{originName}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -254,7 +274,11 @@ const CompanyDetail = ({
                   newses.map((news, index) => (
                     <tr key={index} className="hover:bg-neutral-50">
                       <td className="px-6 py-3">
-                        {formatDate(news?.published_date ?? "Date Unknown")}
+                        {news?.published_date ? (
+                          formatDate(news?.published_date)
+                        ) : (
+                          <span className="text-neutral-400 textsm">Not found</span>
+                        )}
                       </td>
                       <td className="px-6 py-3">
                         <Link
@@ -349,22 +373,41 @@ const CompanyDetail = ({
                 </tr>
               </thead>
               <tbody className="divide-y-[1.5px] divide-border-dark text-sm text-title-dark font-medium">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <tr key={index} className="hover:bg-neutral-50">
-                    <td className="px-6 py-3">17 October, 2025</td>
-                    <td className="px-6 py-3 flex items-center gap-2">
-                      <Image
-                        src="/profile-image.png"
-                        alt="Profile"
-                        width={16}
-                        height={16}
-                        className="rounded-full"
-                      />
-                      <span>Leslie Alexander</span>
+                {activeCompany?.company_note?.length > 0 ? (
+                  activeCompany?.company_note.map((note, index) => (
+                    <tr key={index} className="hover:bg-neutral-50">
+                      <td className="px-6 py-3">
+                        {formatDate(note?.created_date) ?? "-"}
+                      </td>
+                      {note?.user?.name ? (
+                        <td className="px-6 py-3 flex items-center gap-2">
+                          <Image
+                            src="/profile-image.png"
+                            alt="Profile"
+                            width={16}
+                            height={16}
+                            className="rounded-full"
+                          />
+                          <span>{note?.user?.name}</span>
+                        </td>
+                      ) : (
+                        <td className="px-6 py-3 flex items-center gap-2">
+                          {"-"}
+                        </td>
+                      )}
+                      <td className="px-6 py-3">{note?.note ?? "-"}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-6 py-3 text-center text-neutral-400"
+                    >
+                      No notes available
                     </td>
-                    <td className="px-6 py-3">History Detail</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
