@@ -13,16 +13,32 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { CompanyNewsItem } from "@/lib/types/news-types";
+import {
+  CompanyNewsItem,
+  CompanyType,
+  SingleTaskType,
+} from "@/lib/types/news-types";
 import { formatDate } from "@/lib/utils";
+import AddTaskModal from "./AddTaskModal";
 
-const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
+const CompanyDetail = ({
+  activeCompany,
+  tasks: initialTasks,
+}: {
+  activeCompany: CompanyType;
+  tasks: SingleTaskType[];
+}) => {
   const [loadinNewses, setLoadinNewses] = useState(false);
+  const [tasks, setTasks] = useState<SingleTaskType[]>(initialTasks);
+  const [editingTask, setEditingTask] = useState<SingleTaskType | null>(null);
   const [isTaskCollapsed, setTaskCollapsed] = useState(false);
+  const [isAddTaskOpened, setAddTaskOpened] = useState(false);
   const [isNewsCollapsed, setNewsCollapsed] = useState(false);
   const [isHistoryCollapsed, setHistoryCollapsed] = useState(false);
   const [isNoteCollapsed, setNoteCollapsed] = useState(false);
   const [newses, setNewses] = useState<CompanyNewsItem[]>([]);
+
+  console.log("activeeeee", activeCompany);
 
   const loadNewses = async (companyId: number) => {
     setLoadinNewses(true);
@@ -48,6 +64,11 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
   useEffect(() => {
     console.log("newses data", newses);
   }, [newses]);
+
+  const handleEditTaskClicked = (task: SingleTaskType) => {
+    setEditingTask(task);
+    setAddTaskOpened(true);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto p-4 scrollbar-custom bg-[#ECF1F6]">
@@ -117,6 +138,10 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
                 variant="ghost"
                 className="text-blue-600 text-sm hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
                 size="sm"
+                onClick={() => {
+                  setAddTaskOpened(true);
+                  setEditingTask(null);
+                }}
               >
                 <Plus size={14} />
                 <span>Add</span>
@@ -138,26 +163,40 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
                 </tr>
               </thead>
               <tbody className="divide-y-[1.5px] divide-border-dark text-sm text-title-dark font-medium">
-                {Array.from({ length: 2 }).map((_, index) => (
-                  <tr key={index} className="hover:bg-neutral-50">
-                    <td className="px-6 py-3">17 October, 2025</td>
-                    <td className="px-6 py-3">Responsible</td>
-                    <td className="px-6 py-3">Task detail</td>
-                    <td className="px-6 py-3">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold border border-blue-200">
-                        Status
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 flex gap-2 justify-end">
-                      <button className="text-subtitle-dark hover:text-blue-600 cursor-pointer">
-                        <Pencil size={16} />
-                      </button>
-                      <button className="text-subtitle-dark hover:text-red-600 cursor-pointer">
+                {tasks.length > 0 ? (
+                  tasks.map((task, index) => (
+                    <tr key={index} className="hover:bg-neutral-50">
+                      <td className="px-6 py-3">{formatDate(task.due_date)}</td>
+                      <td className="px-6 py-3">Responsible</td>
+                      <td className="px-6 py-3">Task detail</td>
+                      <td className="px-6 py-3">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold border border-blue-200">
+                          {task.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 flex gap-2 justify-end">
+                        <button
+                          onClick={() => handleEditTaskClicked(task)}
+                          className="text-subtitle-dark hover:text-blue-600 cursor-pointer"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        {/* <button className="text-subtitle-dark hover:text-red-600 cursor-pointer">
                         <Trash2 size={16} />
-                      </button>
+                      </button> */}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-6 py-3 text-center text-neutral-400"
+                    >
+                      No tasks available
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -186,7 +225,6 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
               <thead className="bg-neutral-50 text-subtitle-dark/90 text-sm font-semibold border-b-[1.5px] border-border-dark">
                 <tr>
                   <th className="px-6 py-3 w-48">Date</th>
-                  <th className="px-6 py-3 w-48">Portal name</th>
                   <th className="px-6 py-3 w-full">Link</th>
                 </tr>
               </thead>
@@ -217,9 +255,6 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
                     <tr key={index} className="hover:bg-neutral-50">
                       <td className="px-6 py-3">
                         {formatDate(news?.published_date ?? "Date Unknown")}
-                      </td>
-                      <td className="px-6 py-3">
-                        {news.portal ?? "Unknown Source"}
                       </td>
                       <td className="px-6 py-3">
                         <Link
@@ -335,6 +370,17 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: any }) => {
           </div>
         </div>
       </div>
+
+      <AddTaskModal
+        open={isAddTaskOpened}
+        onClose={() => setAddTaskOpened(false)}
+        editingTask={editingTask}
+        onAdd={(task) => setTasks((prev) => [...prev, task])}
+        onEdit={(task) =>
+          setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)))
+        }
+        compId={activeCompany?.id}
+      />
     </div>
   );
 };

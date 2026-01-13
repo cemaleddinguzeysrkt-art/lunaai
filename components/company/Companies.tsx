@@ -7,14 +7,26 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import CompanyDetail from "./CompanyDetail";
-import { CompanyArrayType } from "@/lib/types/news-types";
+import { CompanyArrayType, CompanyType, SingleTaskType } from "@/lib/types/news-types";
+import AddCompanyModal from "./AddCompanyModal";
+import { definition as Definition } from "@/app/generated/prisma/client";
 
 interface CompaniesProps {
   initialCompanies: CompanyArrayType;
+  origins: Definition[];
+  statuses: Definition[];
+  tags: Definition[];
+  tasks:SingleTaskType[];
 }
 
-export default function Companies({ initialCompanies }: CompaniesProps) {
-  const [companies, setCompanies] = useState(initialCompanies.companies);
+export default function Companies({
+  initialCompanies,
+  origins,
+  statuses,
+  tags,
+  tasks
+}: CompaniesProps) {
+  const [companies, setCompanies] = useState(initialCompanies);
   const [sidebarWidth, setSidebarWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
   const [showListMenu, setShowListMenu] = useState(false);
@@ -22,15 +34,39 @@ export default function Companies({ initialCompanies }: CompaniesProps) {
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
     companies.length ? companies[0].id : null
   );
+  const [addCompanyModalOpened, setAddCompanyModalOpened] =
+    useState<boolean>(false);
 
-  const getCompanyTags = (company: Company) => {
+  const [editingCompany, setEditingCompany] = useState<CompanyType | null>(
+    null
+  );
+
+  // const getCompanyTags = (company: Company) => {
+  //   const tagIds = company.tags
+  //     ? company.tags.split(",").filter((id) => id.trim() !== "")
+  //     : [];
+
+  //   const displayTags = tagIds
+  //     .map((id) => COMPANY_TAGS_MAP[id.trim()])
+  //     .filter((tagName) => tagName !== undefined);
+  //   return displayTags;
+  // };
+
+  const getCompanyTags = (company: CompanyType) => {
+    if (!company.tags || !tags?.length) return [];
+
     const tagIds = company.tags
-      ? company.tags.split(",").filter((id) => id.trim() !== "")
-      : [];
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
 
     const displayTags = tagIds
-      .map((id) => COMPANY_TAGS_MAP[id.trim()])
-      .filter((tagName) => tagName !== undefined);
+      .map((id) => {
+        const def = tags.find((t) => t.id.toString() === id);
+        return def?.value;
+      })
+      .filter((v): v is string => Boolean(v));
+
     return displayTags;
   };
 
@@ -69,12 +105,17 @@ export default function Companies({ initialCompanies }: CompaniesProps) {
   }, [isResizing]);
 
   const activeCompany = selectedCompanyId
-    ? companies.find((c) => c.id === selectedCompanyId) || null
+    ? companies.find((c: CompanyType) => c.id === selectedCompanyId) || null
     : null;
 
   useEffect(() => {
     console.log("companiess", companies);
   }, []);
+
+  const handleEditCompanyClick = () => {
+    setEditingCompany(activeCompany);
+    setAddCompanyModalOpened(true);
+  };
 
   return (
     <div className="flex h-full bg-neutral-50">
@@ -133,6 +174,8 @@ export default function Companies({ initialCompanies }: CompaniesProps) {
                 variant="ghost"
                 className="text-blue-600 text-sm hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
                 size="sm"
+                onClick={handleEditCompanyClick}
+                disabled={!activeCompany}
               >
                 <Pencil size={14} />
                 <span>Edit</span>
@@ -141,6 +184,7 @@ export default function Companies({ initialCompanies }: CompaniesProps) {
                 variant="ghost"
                 className="text-blue-600 text-sm hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
                 size="sm"
+                onClick={() => setAddCompanyModalOpened(true)}
               >
                 <Plus size={14} />
                 <span>Add company</span>
@@ -168,7 +212,7 @@ export default function Companies({ initialCompanies }: CompaniesProps) {
 
         {/* companies list */}
         <div className="flex-1 overflow-y-auto scrollbar-custom">
-          {companies.map((company) => (
+          {companies.map((company: CompanyType) => (
             <div
               key={company.id}
               onClick={() => setSelectedCompanyId(company.id)}
@@ -229,7 +273,25 @@ export default function Companies({ initialCompanies }: CompaniesProps) {
       </div>
 
       {/* company details panel */}
-      {activeCompany && <CompanyDetail activeCompany={activeCompany} />}
+      {activeCompany && <CompanyDetail activeCompany={activeCompany} tasks={tasks}/>}
+
+      {/* Add company dialog */}
+      <AddCompanyModal
+        open={addCompanyModalOpened}
+        onClose={() => setAddCompanyModalOpened(false)}
+        onDelete={() => {}}
+        statuses={statuses}
+        origins={origins}
+        tags={tags}
+        activeNewsUrl={""}
+        editingCompany={editingCompany}
+        onEdit={(updatedCompany) =>
+          setCompanies((prev) =>
+            prev.map((c) => (c.id === updatedCompany.id ? updatedCompany : c))
+          )
+        }
+        onAdd={(newCompany) => setCompanies((prev) => [...prev, newCompany])}
+      />
     </div>
   );
 }

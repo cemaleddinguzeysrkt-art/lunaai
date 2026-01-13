@@ -5,16 +5,19 @@ export async function getCompanies() {
     orderBy: {
       id: "asc",
     },
-    take:50,
+    take: 50,
     include: {
-      company_news: true,
-      user:true
+      company_news: {
+        include: {
+          news: true,
+        },
+      },
+      user: true,
+      company_note: true,
     },
   });
 
-  return {
-    companies,
-  };
+  return companies;
 }
 
 export async function getCompanyNewses(companyId: number) {
@@ -41,4 +44,17 @@ export async function getCompanyNewses(companyId: number) {
   return {
     newses,
   };
+}
+
+export async function getTasks() {
+  const tasks = await prisma.task.findMany({
+    orderBy: {
+      id: "asc",
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  return tasks;
 }

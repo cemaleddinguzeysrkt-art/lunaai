@@ -50,5 +50,73 @@ export async function createCompany(input: CreateCompanyType) {
           })),
       },
     },
+    include: {
+      company_news: {
+        include: {
+          news: true,
+        },
+      },
+      user: true,
+      company_note: true,
+    },
+  });
+}
+export async function editCompany(input: CreateCompanyType, companyId: number) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const userId = session.user.id;
+  const data = companySchema.parse(input);
+
+  return prisma.company.update({
+    where: {
+      id: companyId,
+      // user_id: userId, 
+    },
+    data: {
+      name: data.name,
+      website: data.url || null,
+      status_id: Number(data.status),
+      origin_id: Number(data.origin),
+
+      tags: data.tags.join(","),
+
+      // 🔹 Replace notes
+      company_note: {
+        deleteMany: {
+        },
+        create: data.notes
+          .filter((n) => n.trim().length > 0)
+          .map((note) => ({
+            note,
+            user_id: userId,
+          })),
+      },
+
+      company_news: {
+        deleteMany: {},
+        create: data.resourceUrls
+          .filter((url) => url.trim().length > 0)
+          .map((url) => ({
+            news: {
+              create: {
+                url,
+              },
+            },
+          })),
+      },
+    },
+    include: {
+      company_news: {
+        include: {
+          news: true,
+        },
+      },
+      user: true,
+      company_note: true,
+    },
   });
 }

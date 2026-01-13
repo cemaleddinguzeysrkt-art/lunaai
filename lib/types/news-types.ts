@@ -4,7 +4,8 @@ import {
   getNextCenterNews,
   getTrainings,
 } from "../queries/article";
-import { getCompanies, getCompanyNewses } from "../queries/company";
+import { getCompanies, getCompanyNewses, getTasks } from "../queries/company";
+import { geteNewsSources } from "../queries/definition";
 
 export interface FilterGroup {
   name: string;
@@ -26,3 +27,8 @@ export type ArticleType = Awaited<ReturnType<typeof getNextCenterNews>>;
 export type NewsesArrayType = Awaited<ReturnType<typeof getCompanyNewses>>;
 export type TrainingsArrayType = Awaited<ReturnType<typeof getTrainings>>;
 export type CompanyArrayType = Awaited<ReturnType<typeof getCompanies>>;
+export type CompanyType = CompanyArrayType extends (infer T)[] ? T : never;
+export type TasksArrayType = Awaited<ReturnType<typeof getTasks>>;
+export type SingleTaskType = TasksArrayType extends (infer T)[] ? T : never;
+export type NewsSourcesArrayType = Awaited<ReturnType<typeof geteNewsSources>>;
+export type NewsSourceType = NewsSourcesArrayType extends (infer T)[] ? T : never;

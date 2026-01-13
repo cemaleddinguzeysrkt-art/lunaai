@@ -35,6 +35,8 @@ import { applyTrainingFilters } from "@/lib/actions/trainingCategoryAction";
 import Link from "next/link";
 import { fetchNextCenterNews } from "@/lib/queries/client-queries/newsClient";
 import { WeeklyTargetProgress } from "@/lib/queries/user";
+import { tr } from "zod/v4/locales";
+import { Input } from "../ui/input";
 
 interface ArticleReviewProps {
   articles: ArticlesArrayType;
@@ -81,6 +83,9 @@ export default function ArticleReview({
   const [checkedFilters, setCheckedFilters] = useState<Record<string, boolean>>(
     {}
   );
+  const [isOtherIndustryChecked, setIsOtherIndustryChecked] = useState(false);
+  const [otherIndustryInput, setOtherIndustryInput] = useState("");
+
   const [showClassifyMenu, setShowClassifyMenu] = useState(false);
   const initialType =
     (searchParams.get("type") as "classifying" | "cleaning") ?? "cleaning";
@@ -109,6 +114,8 @@ export default function ArticleReview({
   );
   const [isResizingRight, setIsResizingRight] = useState(false);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isShowingSelectedNews, setShowingSelectedNews] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const leftWidthRef = useRef(leftSidebarWidth);
   const rightWidthRef = useRef(rightSidebarWidth);
@@ -123,6 +130,7 @@ export default function ArticleReview({
   >(null);
   const [trainedCenterArticle, setTrainedCenterArticle] =
     useState<TrainedArticleType | null>(null);
+
   const [centerArticleType, setCenterArticleType] = useState<
     "trained" | "untrained"
   >("untrained");
@@ -170,7 +178,7 @@ export default function ArticleReview({
     const fetchData = async () => {
       setLoadingNextCenterNews(true);
       try {
-        const nextNews = await fetchNextCenterNews();
+        const nextNews = await fetchNextCenterNews(trainingPageType);
         console.log("nexxxxxxx", nextNews);
         setCenterArticle(nextNews);
       } catch (error) {
@@ -259,8 +267,42 @@ export default function ArticleReview({
     setAllowNext(true);
   };
 
+  const selectedCategoriesCount = Object.entries(checkedFilters).filter(
+    ([key, v]) => v && key.startsWith("Category-")
+  ).length;
+
+  const selectedIndustriesCount = Object.entries(checkedFilters).filter(
+    ([key, v]) => v && key.startsWith("Industry-")
+  ).length;
+
   const toggleFilter = (option: string) => {
-    setCheckedFilters((prev) => ({ ...prev, [option]: !prev[option] }));
+    const [type] = option.split("-"); // "Category" or "Industry"
+
+    setCheckedFilters((prev) => {
+      const isCurrentlyChecked = !!prev[option];
+
+      // count current selections of this type
+      const currentCount = Object.entries(prev).filter(
+        ([key, v]) => v && key.startsWith(type + "-")
+      ).length;
+
+      // if trying to ADD and already 2 selected → block
+      if (!isCurrentlyChecked && currentCount >= 2) {
+        toast.info(
+          `You can select at most 2 ${type.toLowerCase().replace("y", "i")}es`,
+          {
+            id: "max-selection-toast",
+            richColors: true,
+          }
+        );
+        return prev; // do nothing
+      }
+
+      return {
+        ...prev,
+        [option]: !isCurrentlyChecked,
+      };
+    });
   };
 
   useEffect(() => {
@@ -284,9 +326,27 @@ export default function ArticleReview({
       };
     });
 
-    setArticleColors(colors);
-  }, [articles]);
+    if (trainingPageType == "classifying" && centerArticle) {
+      const centerLikeValue = (centerArticle as TrainedArticleType)
+        ?.news_training?.[0]?.like;
 
+      if (!centerLikeValue) {
+        colors[centerArticle.id] = { normal: null, light: null };
+        return;
+      }
+      const centerIndex = centerLikeValue - 1;
+      colors[centerArticle.id] = {
+        normal: TRAINING_COLORS[centerIndex],
+        light: TRAINING_COLORS_LIGHT[centerIndex],
+      };
+    }
+
+    setArticleColors(colors);
+  }, [articles, centerArticle]);
+
+  useEffect(() => {
+    console.log("colorsssss", articleColors);
+  }, [articleColors]);
   useEffect(() => {
     console.log("status", statuses);
     console.log("origins", origins);
@@ -407,8 +467,10 @@ export default function ArticleReview({
   const shiftNextNews = async () => {
     setLoadingNextCenterNews(true);
     try {
-      const nextNews = await fetchNextCenterNews();
+      const nextNews = await fetchNextCenterNews(trainingPageType);
       if (!nextNews) {
+        handleSetActiveNews(centerArticle?.id as number);
+        setCenterArticle(null);
         return;
       }
       setCenterArticle(nextNews);
@@ -438,11 +500,21 @@ export default function ArticleReview({
       .map(([key]) => key.split("-")[1])
       .filter(Boolean);
 
+    const otherIndustries = isOtherIndustryChecked
+      ? otherIndustryInput
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean)
+      : [];
+
+    const finalFilters = [...filterIds, ...otherIndustries];
+
     try {
-      await applyTrainingFilters(filterIds, centerArticle?.id as number);
+      await applyTrainingFilters(finalFilters, centerArticle?.id as number);
       shiftNextNews();
       // toast.success("Filters applied successfully", { richColors: true });
       setCheckedFilters({});
+      setIsOtherIndustryChecked(false);
       if (filtersScrollContainerRef.current) {
         filtersScrollContainerRef.current.scrollTo({
           top: 0,
@@ -515,14 +587,38 @@ export default function ArticleReview({
     );
   }, [articles, searchParams, pathname, router]);
 
+  // useEffect(() => {
+  //   if (trainingPageType !== "classifying") return;
+
+  //   const training = (centerArticle as TrainedArticleType)?.news_training;
+  //   const categoryString =
+  //     training && training.length > 0 ? training[0].category ?? "" : "";
+
+  //   // const categoryString = (centerArticle as TrainedArticleType)?.news_training[0]?.category ?? "";
+
+  //   if (!categoryString) {
+  //     setCheckedFilters({});
+  //     return;
+  //   }
+
+  //   const hydrated: Record<string, boolean> = {};
+
+  //   categoryString.split(",").forEach((id) => {
+  //     const cleanId = id.trim();
+  //     if (cleanId) hydrated[`Category-${cleanId}`] = true;
+  //   });
+
+  //   setCheckedFilters(hydrated);
+  //   console.log("hydrrr checkkk", categories, industries);
+  //   console.log("hydrrr", hydrated);
+  // }, [centerArticle, trainingPageType]);
+
   useEffect(() => {
     if (trainingPageType !== "classifying") return;
 
     const training = (centerArticle as TrainedArticleType)?.news_training;
     const categoryString =
       training && training.length > 0 ? training[0].category ?? "" : "";
-
-    // const categoryString = (centerArticle as TrainedArticleType)?.news_training[0]?.category ?? "";
 
     if (!categoryString) {
       setCheckedFilters({});
@@ -531,15 +627,24 @@ export default function ArticleReview({
 
     const hydrated: Record<string, boolean> = {};
 
+    const categoryIds = new Set(categories?.map((c) => String(c.id)) ?? []);
+    const industryIds = new Set(industries?.map((i) => String(i.id)) ?? []);
+
     categoryString.split(",").forEach((id) => {
       const cleanId = id.trim();
-      if (cleanId) hydrated[`Category-${cleanId}`] = true;
+      if (!cleanId) return;
+
+      if (categoryIds.has(cleanId)) {
+        hydrated[`Category-${cleanId}`] = true;
+      } else if (industryIds.has(cleanId)) {
+        hydrated[`Industry-${cleanId}`] = true;
+      } else {
+        console.warn("Unknown training id:", cleanId);
+      }
     });
 
     setCheckedFilters(hydrated);
-    console.log("hydrrr checkkk", categories, industries);
-    console.log("hydrrr", hydrated);
-  }, [centerArticle, trainingPageType]);
+  }, [centerArticle, trainingPageType, categories, industries]);
 
   const handleSetActiveNews = (articleId: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -552,7 +657,22 @@ export default function ArticleReview({
     params.set("activeNews", article.id.toString());
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setCenterArticle(article);
+    setShowingSelectedNews(true);
   };
+
+  const handleContinueClicked = () => {
+    shiftNextNews();
+    setShowingSelectedNews(false);
+  };
+
+  const hasAtLeastOneCategoryAndIndustry = (() => {
+    const entries = Object.entries(checkedFilters).filter(([, v]) => v);
+
+    const hasCategory = entries.some(([key]) => key.startsWith("Category-"));
+    const hasIndustry = entries.some(([key]) => key.startsWith("Industry-"));
+
+    return hasCategory && hasIndustry;
+  })();
 
   return (
     <div ref={containerRef} className="flex flex-col h-full bg-white">
@@ -722,12 +842,12 @@ export default function ArticleReview({
                       if (el) articleListRefs.current.set(article.id, el);
                       else articleListRefs.current.delete(article.id);
                     }}
-                    className="flex flex-col items-center gap-2 scroll-mt-2"
+                    className="flex flex-col items-center gap-2 scroll-mt-2 relative"
                   >
                     <div
                       onClick={() => handleClickTrainedNews(article)}
                       className={`
-                  py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs min-w-[153px] w-[78%]
+                  pt-2 pb-3 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs min-w-[153px] w-[78%]
                   ${colorClass}
                 `}
                     >
@@ -737,9 +857,13 @@ export default function ArticleReview({
                       <p className="text-xs text-neutral-900 line-clamp-8 leading-relaxed font-poppins">
                         {formattedContent}
                       </p>
+
+                      <div className="absolute -right-2 -bottom-2 text-xs rounded-lg bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-[10px] font-bold text-neutral-600 w-fit px-2 py-[3px]">
+                        {article?.id}
+                      </div>
                     </div>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium text-neutral-900">
-                      {article?.id}
+                      {articlesList.length - idx}
                     </div>
                   </div>
                 );
@@ -775,7 +899,7 @@ export default function ArticleReview({
         </aside>
 
         {/* article content */}
-        {centerArticle ? (
+        {centerArticle && centerArticle.id ? (
           <section
             ref={scrollContainerRef}
             className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom"
@@ -791,7 +915,7 @@ export default function ArticleReview({
                 }`}
               >
                 <div className="text-title-red font-bold text-sm tracking-wider uppercase px-2 py-1 mb-2 rounded w-fit ml-auto">
-                  {centerArticle.company_news[0]?.company?.name || "-"}
+                  {centerArticle?.company_news?.[0]?.company?.name || "-"}
                 </div>
 
                 <div className="mb-6 mt-2">
@@ -800,7 +924,7 @@ export default function ArticleReview({
                   </h1>
                   <div className="flex items-center flex-wrap gap-x-2 gap-y-2 text-sm text-neutral-500">
                     <span className="font-bold text-subtitle-dark text-sm">
-                      {centerArticle.news_source?.name ?? "Unknown Source"}
+                      {centerArticle?.news_source?.name ?? "Unknown Source"}
                     </span>
                     {/* <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
                     <span className="text-subtitle-dark font-medium text-sm">
@@ -852,83 +976,9 @@ export default function ArticleReview({
           </div>
         ) : (
           <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
-            No news selected
+            No new news available
           </div>
         )}
-
-        {/* article content
-        {(trainedCenterArticle && centerArticleType === "trained") ? (
-          <section
-            ref={scrollContainerRef}
-            className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom"
-          >
-            <div
-              className={`my-6 rounded-3xl border-6 shadow-sm h-fit w-[93%] `}
-            >
-              <div
-                className={`bg-white min-h-full p-12 shadow-sm relative border-x rounded-[18px] border`}
-              >
-                <div className="text-title-red font-bold text-sm tracking-wider uppercase px-2 py-1 mb-2 rounded w-fit ml-auto">
-                  {trainedCenterArticle.company_news[0]?.company?.name || "-"}
-                </div>
-
-                <div className="mb-6 mt-2">
-                  <h1 className="text-xl font-bold text-title-dark mb-4 leading-tight">
-                    {trainedCenterArticle.header}
-                  </h1>
-                  <div className="flex items-center flex-wrap gap-x-2 gap-y-2 text-sm text-neutral-500">
-                    <span className="font-bold text-subtitle-dark text-sm">
-                      {trainedCenterArticle.news_source?.name ??
-                        "Unknown Source"}
-                    </span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 "></span>
-                    <span className="text-subtitle-dark font-medium text-sm">
-                      {formatDate(trainedCenterArticle.published_date)}
-                    </span>
-                  </div>
-                </div>
-
-                <div ref={contentRef}>
-                  <div className="prose prose-sm max-w-none text-title-dark/90 text-sm leading-8 selection:bg-blue-100 selection:text-blue-900 whitespace-pre-wrap">
-                    {formattedActiveArticleContent ?? ""}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {selectionRect && (
-              <div
-                className="fixed z-100 bg-white text-title-dark shadow-xl px-3 py-1.5 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-200 border border-gray-300 rounded-md"
-                style={{
-                  top: `${selectionRect.top - 48}px`,
-                  left: `${selectionRect.left + selectionRect.width / 2}px`,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                <span className="text-xs font-semibold font-mono">
-                  {selectedWordCount ?? 0}
-                </span>
-                <div className="h-3 w-px bg-neutral-400"></div>
-                <button
-                  onClick={handleSelectText}
-                  className="text-xs font-bold text-blue-500 hover:text-blue-700 cursor-pointer"
-                >
-                  Select
-                </button>
-
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45"></div>
-              </div>
-            )}
-          </section>
-        ) : loadingNextCenterNews ? (
-          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
-            <Loader2 className="animate-spin size-5" />
-          </div>
-        ) : (
-          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
-            No news selected
-          </div>
-        )} */}
 
         {/* filters */}
         <aside
@@ -943,7 +993,7 @@ export default function ArticleReview({
             className="flex-1 overflow-y-auto pt-6 pb-4 space-y-4 scrollbar-custom flex flex-col"
             ref={filtersScrollContainerRef}
           >
-            {trainingPageType === "classifying" && (
+            {trainingPageType === "classifying" && centerArticle && (
               <div className="space-y-6">
                 <div className="px-4 border-b-2 border-border-dark pb-6">
                   <div className="flex items-center justify-between mb-4">
@@ -1013,13 +1063,13 @@ export default function ArticleReview({
                           className={`
                           w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-all duration-200
                           ${
-                            checkedFilters[`Category-${option.id}`]
+                            checkedFilters[`Industry-${option.id}`]
                               ? "bg-checkbox-bg"
                               : "border-gray-300 group-hover:border-blue-400"
                           }
                         `}
                         >
-                          {checkedFilters[`Category-${option.id}`] && (
+                          {checkedFilters[`Industry-${option.id}`] && (
                             <Check
                               className="w-3.5 h-3.5 text-white"
                               strokeWidth={3}
@@ -1029,14 +1079,14 @@ export default function ArticleReview({
                             type="checkbox"
                             className="hidden"
                             onChange={() =>
-                              toggleFilter(`Category-${option.id}`)
+                              toggleFilter(`Industry-${option.id}`)
                             }
-                            checked={!!checkedFilters[`Category-${option.id}`]}
+                            checked={!!checkedFilters[`Industry-${option.id}`]}
                           />
                         </div>
                         <span
                           className={`text-sm transition-colors truncate ${
-                            checkedFilters[`Category-${option.id}`]
+                            checkedFilters[`Industry-${option.id}`]
                               ? "text-subtitle-dark font-medium"
                               : "text-neutral-600 group-hover:text-subtitle-dark"
                           }`}
@@ -1045,6 +1095,56 @@ export default function ArticleReview({
                         </span>
                       </label>
                     ))}
+                    {/* Other industry option */}
+                    <label className="flex items-start gap-3 cursor-pointer group select-none">
+                      <div
+                        className={`
+                        w-5 h-5 mt-1 shrink-0 rounded border flex items-center justify-center transition-all duration-200
+                        ${
+                          isOtherIndustryChecked
+                            ? "bg-checkbox-bg"
+                            : "border-gray-300 group-hover:border-blue-400"
+                        }
+                      `}
+                        onClick={() =>
+                          setIsOtherIndustryChecked((prev) => !prev)
+                        }
+                      >
+                        {isOtherIndustryChecked && (
+                          <Check
+                            className="w-3.5 h-3.5 text-white"
+                            strokeWidth={3}
+                          />
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2 w-full mt-[3px]">
+                        <span
+                          className={`text-sm transition-colors ${
+                            isOtherIndustryChecked
+                              ? "text-subtitle-dark font-medium"
+                              : "text-neutral-600 group-hover:text-subtitle-dark"
+                          }`}
+                          onClick={() =>
+                            setIsOtherIndustryChecked((prev) => !prev)
+                          }
+                        >
+                          Other
+                        </span>
+
+                        {isOtherIndustryChecked && (
+                          <Input
+                            type="text"
+                            placeholder="e.g. Fintech, AgriTech, Deep Tech"
+                            value={otherIndustryInput}
+                            onChange={(e) =>
+                              setOtherIndustryInput(e.target.value)
+                            }
+                            className="w-full border rounded-md px-3 py-1.5 text-sm outline-none"
+                          />
+                        )}
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -1056,7 +1156,7 @@ export default function ArticleReview({
                   onClick={handleApplyFilters}
                   variant="outline"
                   size="sm"
-                  disabled={!Object.values(checkedFilters).some((v) => v)}
+                  disabled={!hasAtLeastOneCategoryAndIndustry}
                   className="flex items-center gap-2 rounded-full w-full text-subtitle-dark text-xs font-bold cursor-pointer"
                 >
                   {applyingFilters && (
@@ -1067,22 +1167,24 @@ export default function ArticleReview({
               )}
 
               <div className="flex flex-col gap-3 justify-between mb-4">
-                <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
-                  Notes
-                </h3>
                 {notes?.length === 0 ? (
                   <p className="text-neutral-500 text-sm text-center">-</p>
                 ) : (
-                  <ul className="space-y-2">
-                    {notes.map((note, i) => (
-                      <li
-                        key={i}
-                        className="p-3 rounded-md border bg-neutral-50 text-xs text-neutral-800"
-                      >
-                        {note}
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
+                      Notes
+                    </h3>
+                    <ul className="space-y-2">
+                      {notes.map((note, i) => (
+                        <li
+                          key={i}
+                          className="p-3 rounded-md border bg-neutral-50 text-xs text-neutral-800"
+                        >
+                          {note}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
                 {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
               </div>
@@ -1141,6 +1243,12 @@ export default function ArticleReview({
             }}
           />
         )}
+
+        {isShowingSelectedNews && (
+          <div className="absolute bottom-8 right-1/2 left-1/2 ml-56">
+            <Button variant="outline" className="drop-shadow-2xl rounded-full cursor-pointer" size="md" onClick={handleContinueClicked}>Continue</Button>
+          </div>
+        )}
       </div>
 
       {/* Add company dialog */}
@@ -1155,7 +1263,7 @@ export default function ArticleReview({
       />
 
       {/* cleaning feedback modal */}
-      {trainingPageType === "cleaning" && (
+      {(trainingPageType === "cleaning" && centerArticle) && (
         <CleaningFeedBackModal
           addingFeedbackStates={addingFeedbackStates}
           onlike={() => handleCleaningFeedback("like")}
