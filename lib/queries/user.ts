@@ -62,22 +62,43 @@ export async function getWeeklyTargetProgress(
   const targetData = await prisma.definition.findFirst({
     where: {
       name: {
-        startsWith:targetName
+        startsWith: targetName,
       },
     },
   });
+
+  const sourceIdStr = targetData?.name
+    ?.split(";")
+    .find((part) => part.startsWith("sourceid:"))
+    ?.split(":")[1];
+
+  const sourceId = sourceIdStr ? Number(sourceIdStr) : null;
+
+  if (!sourceId) {
+    return {
+      completedTargets: 0,
+      totalTargets: 0,
+    };
+  }
+
   const totalWeeklyTargets =
     (targetData?.value && parseInt(targetData?.value)) || 0;
-  const weekStart = getWeekStart();
+  // const weekStart = getWeekStart();
 
   const completedCleaningTargets = await prisma.news_training.count({
     where: {
       user_id: userId,
-      time_stamp: {
-        gte: weekStart,
-      },
+      // time_stamp: {
+      //   gte: weekStart,
+      // },
       like: {
         not: null,
+      },
+      news: {
+        is: {
+          news_source_id: sourceId,
+          invalid: 0,
+        },
       },
     },
   });
@@ -85,11 +106,17 @@ export async function getWeeklyTargetProgress(
   const completedClassifyingTargets = await prisma.news_training.count({
     where: {
       user_id: userId,
-      time_stamp: {
-        gte: weekStart,
-      },
+      // time_stamp: {
+      //   gte: weekStart,
+      // },
       category: {
         not: null,
+      },
+      news: {
+        is: {
+          news_source_id: sourceId,
+          invalid: 0,
+        },
       },
     },
   });

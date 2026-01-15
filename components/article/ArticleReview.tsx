@@ -33,7 +33,10 @@ import { toast } from "sonner";
 import { insertCleaningFeedback } from "@/lib/actions/cleaningFeedbackAction";
 import { applyTrainingFilters } from "@/lib/actions/trainingCategoryAction";
 import Link from "next/link";
-import { fetchNextCenterNews } from "@/lib/queries/client-queries/newsClient";
+import {
+  fetchMoreArticles,
+  fetchNextCenterNews,
+} from "@/lib/queries/client-queries/newsClient";
 import { WeeklyTargetProgress } from "@/lib/queries/user";
 import { tr } from "zod/v4/locales";
 import { Input } from "../ui/input";
@@ -139,6 +142,10 @@ export default function ArticleReview({
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const articlesScrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const [loadingMoreArticles, setLoadingMoreArticles] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const trainingIdMap = useRef<Map<number, number>>(new Map());
 
   const formattedActiveArticleContent =
     centerArticle?.content?.replace(/\\n/g, "\n") ?? "";
@@ -311,13 +318,52 @@ export default function ArticleReview({
     });
   };
 
+  // useEffect(() => {
+  //   const colors: Record<
+  //     number,
+  //     { normal: string | null; light: string | null }
+  //   > = {};
+
+  //   articles.forEach((article) => {
+  //     const likeValue = article.news_training?.[0]?.like;
+
+  //     if (!likeValue) {
+  //       colors[article.id] = { normal: null, light: null };
+  //       return;
+  //     }
+
+  //     const index = likeValue - 1;
+  //     colors[article.id] = {
+  //       normal: TRAINING_COLORS[index],
+  //       light: TRAINING_COLORS_LIGHT[index],
+  //     };
+  //   });
+
+  //   if (trainingPageType == "classifying" && centerArticle) {
+  //     const centerLikeValue = (centerArticle as TrainedArticleType)
+  //       ?.news_training?.[0]?.like;
+
+  //     if (!centerLikeValue) {
+  //       colors[centerArticle.id] = { normal: null, light: null };
+  //       return;
+  //     }
+  //     const centerIndex = centerLikeValue - 1;
+  //     colors[centerArticle.id] = {
+  //       normal: TRAINING_COLORS[centerIndex],
+  //       light: TRAINING_COLORS_LIGHT[centerIndex],
+  //     };
+  //   }
+
+  //   setArticleColors(colors);
+  // }, [articles, centerArticle]);
+
   useEffect(() => {
     const colors: Record<
       number,
       { normal: string | null; light: string | null }
     > = {};
 
-    articles.forEach((article) => {
+    articlesList.forEach((article) => {
       const likeValue = article.news_training?.[0]?.like;
 
       if (!likeValue) {
@@ -332,31 +378,21 @@ export default function ArticleReview({
       };
     });
 
-    if (trainingPageType == "classifying" && centerArticle) {
+    if (trainingPageType === "classifying" && centerArticle) {
       const centerLikeValue = (centerArticle as TrainedArticleType)
         ?.news_training?.[0]?.like;
 
-      if (!centerLikeValue) {
-        colors[centerArticle.id] = { normal: null, light: null };
-        return;
+      if (centerLikeValue) {
+        const centerIndex = centerLikeValue - 1;
+        colors[centerArticle.id] = {
+          normal: TRAINING_COLORS[centerIndex],
+          light: TRAINING_COLORS_LIGHT[centerIndex],
+        };
       }
-      const centerIndex = centerLikeValue - 1;
-      colors[centerArticle.id] = {
-        normal: TRAINING_COLORS[centerIndex],
-        light: TRAINING_COLORS_LIGHT[centerIndex],
-      };
     }
 
     setArticleColors(colors);
-  }, [articles, centerArticle]);
-
-  useEffect(() => {
-    console.log("colorsssss", articleColors);
-  }, [articleColors]);
-  useEffect(() => {
-    console.log("status", statuses);
-    console.log("origins", origins);
-  }, [statuses, origins]);
+  }, [articlesList, centerArticle, trainingPageType]);
 
   const startResizingLeft = useCallback(() => setIsResizingLeft(true), []);
   const startResizingRight = useCallback(() => setIsResizingRight(true), []);
@@ -439,6 +475,16 @@ export default function ArticleReview({
       document.body.classList.remove("no-select");
     };
   }, [isResizingLeft, isResizingRight]);
+
+  useEffect(() => {
+    articles.forEach((item: any) => {
+      const trainingId = item.news_training?.[0]?.id;
+      console.log("trrrrrrr", item);
+      if (trainingId) {
+        trainingIdMap.current.set(item.id, trainingId);
+      }
+    });
+  }, [articles]);
 
   const handleCleaningFeedback = async (
     feedbackType: "like" | "dislike" | "notsure"
@@ -596,32 +642,6 @@ export default function ArticleReview({
     );
   }, [articles, searchParams, pathname, router]);
 
-  // useEffect(() => {
-  //   if (trainingPageType !== "classifying") return;
-
-  //   const training = (centerArticle as TrainedArticleType)?.news_training;
-  //   const categoryString =
-  //     training && training.length > 0 ? training[0].category ?? "" : "";
-
-  //   // const categoryString = (centerArticle as TrainedArticleType)?.news_training[0]?.category ?? "";
-
-  //   if (!categoryString) {
-  //     setCheckedFilters({});
-  //     return;
-  //   }
-
-  //   const hydrated: Record<string, boolean> = {};
-
-  //   categoryString.split(",").forEach((id) => {
-  //     const cleanId = id.trim();
-  //     if (cleanId) hydrated[`Category-${cleanId}`] = true;
-  //   });
-
-  //   setCheckedFilters(hydrated);
-  //   console.log("hydrrr checkkk", categories, industries);
-  //   console.log("hydrrr", hydrated);
-  // }, [centerArticle, trainingPageType]);
-
   useEffect(() => {
     if (trainingPageType !== "classifying") return;
 
@@ -654,6 +674,61 @@ export default function ArticleReview({
 
     setCheckedFilters(hydrated);
   }, [centerArticle, trainingPageType, categories, industries]);
+
+  // load more articles with infinite scroll
+  useEffect(() => {
+    const container = articlesScrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = async () => {
+      if (loadingMoreArticles || !hasMore) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        // near bottom
+        setLoadingMoreArticles(true);
+
+        try {
+          const lastArticle = articlesList[articlesList.length - 1];
+          if (!lastArticle) {
+            setLoadingMoreArticles(false);
+            return;
+          }
+          const cursor = trainingIdMap.current.get(lastArticle.id);
+          console.log("currrrr", trainingIdMap);
+          const more = await fetchMoreArticles(trainingPageType, cursor);
+
+          if (!more || more.length === 0) {
+            setHasMore(false);
+            return;
+          }
+          // if (!more || more.length < 3) {
+          //   setHasMore(false);
+          // }
+
+          more.forEach((item: any) => {
+            if (item.news_training?.[0]?.id) {
+              trainingIdMap.current.set(item.id, item.news_training[0].id);
+            }
+          });
+
+          setArticlesList((prev) => {
+            const existing = new Set(prev.map((p) => p.id));
+            const filtered = more.filter((m: any) => !existing.has(m.id));
+            return [...prev, ...filtered];
+          });
+        } catch (err) {
+          console.error("Failed to load more articles", err);
+        } finally {
+          setLoadingMoreArticles(false);
+        }
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [articlesList, loadingMoreArticles, hasMore, trainingPageType]);
 
   const handleSetActiveNews = (articleId: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -846,7 +921,7 @@ export default function ArticleReview({
 
                 return (
                   <div
-                    key={article.id}
+                    key={trainingIdMap.current.get(article.id) ?? article.id}
                     ref={(el) => {
                       if (el) articleListRefs.current.set(article.id, el);
                       else articleListRefs.current.delete(article.id);
@@ -880,6 +955,11 @@ export default function ArticleReview({
             ) : (
               <div className="flex items-center justify-center text-subtitle-dark">
                 No news availale
+              </div>
+            )}
+            {loadingMoreArticles && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="animate-spin size-4 text-neutral-500" />
               </div>
             )}
           </div>

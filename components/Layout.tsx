@@ -115,7 +115,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-neutral-50 transition-colors cursor-pointer border border-transparent hover:border-neutral-100"
               >
-                <div className="relative">
+                {/* <div className="relative">
                   <Image
                     src="/profile-image.png"
                     alt="Profile"
@@ -124,7 +124,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     className="rounded-full border border-neutral-200 shadow-sm"
                   />
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-                </div>
+                </div> */}
 
                 <div className="text-sm font-semibold text-subtitle-dark hidden md:block">
                   {session?.user.name || "User Name"}
