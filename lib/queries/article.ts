@@ -109,7 +109,8 @@ import { definition as Definition } from "@/app/generated/prisma/client";
 // }
 
 export async function getArticles(
-  trainingType: "classifying" | "cleaning" = "cleaning"
+  trainingType: "classifying" | "cleaning" = "cleaning",
+  cursor?: number
 ) {
   const session = await getServerSession(authOptions);
 
@@ -136,6 +137,10 @@ export async function getArticles(
 
   const trainingRows = await prisma.news_training.findMany({
     take: 50,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
     where: {
       user_id: userId,
       news_id: { not: null },
@@ -166,6 +171,7 @@ export async function getArticles(
               user_id: true,
               like: true,
               feedback: true,
+              id:true
             },
           },
         },
@@ -173,6 +179,7 @@ export async function getArticles(
     },
   });
 
+  console.log("rowwwwww",trainingRows.length)
 
   const news = trainingRows
     .map((row) => row.news)
