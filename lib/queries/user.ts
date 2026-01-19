@@ -96,7 +96,7 @@ export async function getWeeklyTargetProgress(
       },
       news: {
         is: {
-          news_source_id: sourceId,
+          // news_source_id: sourceId,
           invalid: 0,
         },
       },
@@ -114,7 +114,7 @@ export async function getWeeklyTargetProgress(
       },
       news: {
         is: {
-          news_source_id: sourceId,
+          // news_source_id: sourceId,
           invalid: 0,
         },
       },
