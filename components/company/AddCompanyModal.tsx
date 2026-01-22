@@ -21,9 +21,16 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 import { definition as Definition } from "@/app/generated/prisma/client";
-import { createCompany, editCompany } from "@/lib/actions/createCompanyAction";
+import { createCompany, deleteCompany, editCompany } from "@/lib/actions/createCompanyAction";
 import { toast } from "sonner";
 import { ArticlesArrayType, CompanyType } from "@/lib/types/news-types";
+import { FileUploader } from "../FileUploader";
+import {
+  createDocumentPlaceholder,
+  deleteDocumentPlaceholder,
+  getDocumentUploadUrl,
+  linkDocumentToCompany,
+} from "@/lib/actions/document";
 
 interface CompanyData {
   name: string;
@@ -71,31 +78,32 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
 
   const [isTagMenuOpen, setIsTagMenuOpen] = useState(false);
   const [isSavingCompany, setSavingCompany] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const tagMenuRef = useRef<HTMLDivElement>(null);
 
   const isEditMode = !!editingCompany;
 
-  useEffect(() => {
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        tagMenuRef.current &&
-        !tagMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsTagMenuOpen(false);
-      }
-    };
+  // useEffect(() => {
+  //   const handleEsc = (event: KeyboardEvent) => {
+  //     if (event.key === "Escape") onClose();
+  //   };
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (
+  //       tagMenuRef.current &&
+  //       !tagMenuRef.current.contains(event.target as Node)
+  //     ) {
+  //       setIsTagMenuOpen(false);
+  //     }
+  //   };
 
-    window.addEventListener("keydown", handleEsc);
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      window.removeEventListener("keydown", handleEsc);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [onClose]);
+  //   window.addEventListener("keydown", handleEsc);
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => {
+  //     window.removeEventListener("keydown", handleEsc);
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, [onClose]);
 
   useEffect(() => {
     if (
@@ -132,10 +140,10 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
           : [""],
         resourceUrls: editingCompany.company_news?.length
           ? (editingCompany.company_news.map(
-              (news) => news.news?.url
+              (news) => news.news?.url,
             ) as string[])
           : [activeNewsUrl || ""],
-        tags:validTagIds
+        tags: validTagIds,
       });
 
       setErrors({});
@@ -145,7 +153,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -249,25 +257,6 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
     }));
   };
 
-  // const handleSave = async () => {
-  //   if (!validateForm()) {
-  //     toast.error("Please fix the errors before saving.", { richColors: true });
-  //     return;
-  //   }
-  //   setSavingCompany(true);
-  //   console.log("formmmmm", formData);
-  //   try {
-  //     await createCompany(formData);
-  //     onClose();
-  //     toast.success("Company created successfully", { richColors: true });
-  //   } catch (err) {
-  //     toast.error("Failed to create company", { richColors: true });
-  //     console.log("errrrrr", err);
-  //   } finally {
-  //     setSavingCompany(false);
-  //   }
-  // };
-
   const handleSave = async () => {
     if (!validateForm()) {
       toast.error("Please fix the errors before saving.", { richColors: true });
@@ -283,19 +272,51 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
         onEdit && onEdit(updatedCompany);
       } else {
         const addedCompany = await createCompany(formData);
-        toast.success("Company created successfully", { richColors: true });
-        onAdd && onAdd(addedCompany);
+
+        try {
+          //upload added files
+          for (const file of uploadedFiles) {
+            // a) create document row
+            const documentId = await createDocumentPlaceholder(file.name);
+
+            // b) get SAS URL
+            const sasUrl = await getDocumentUploadUrl(documentId, file.type);
+
+            try {
+              // c) upload directly to Azure
+              await fetch(sasUrl, {
+                method: "PUT",
+                headers: {
+                  "x-ms-blob-type": "BlockBlob",
+                  "Content-Type": file.type,
+                },
+                body: file,
+              });
+              // d) link to company
+              await linkDocumentToCompany(addedCompany.id, documentId);
+            } catch (error) {
+              await deleteDocumentPlaceholder(documentId);
+              throw new Error("File upload failed");
+            }
+          }
+
+          toast.success("Company created successfully", { richColors: true });
+          onAdd && onAdd(addedCompany);
+        } catch (error) {
+          await deleteCompany(addedCompany.id);
+          throw error;
+        }
       }
 
       onClose();
-    } catch (err) {
+    } catch (err:any) {
       toast.error(
         isEditMode
-          ? `Failed to update company, please fix the errors before saving`
-          : "Failed to create company, please fix the errors before saving",
-        { richColors: true }
+          ? `Failed to update company, please fix the errors before saving: ${err.message}`
+          : `Failed to create company, please fix the errors before saving: ${err.message}`,
+        { richColors: true },
       );
-      console.log("company save error", err);
+      console.log("company save error", err.message);
     } finally {
       setSavingCompany(false);
     }
@@ -319,7 +340,11 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="min-w-[674px] max-h-[90vh] px-0 flex flex-col">
+      <DialogContent
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="min-w-[674px] max-h-[90vh] px-0 flex flex-col"
+      >
         <DialogHeader>
           <DialogTitle className="font-semibold text-lg px-5">
             {editingCompany ? "Edit Company" : "Add Company"}
@@ -568,7 +593,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
                 <div className="absolute z-100 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 animate-in fade-in slide-in-from-top-1 duration-150">
                   {tags.map((tag: Definition) => {
                     const isSelected = formData.tags.includes(
-                      tag.id?.toLocaleString()
+                      tag.id?.toLocaleString(),
                     );
                     return (
                       <div
@@ -595,6 +620,21 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
             {errors.tags && (
               <p className="text-xs text-danger mt-1">{errors.tags}</p>
             )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-subtitle-dark">
+              Files
+            </label>
+
+            <FileUploader
+              maxFiles={3}
+              maxSizeMB={5}
+              onUploadComplete={(files) => {
+                setTimeout(() => setUploadedFiles(files), 0);
+              }}
+              className="mt-1"
+            />
           </div>
         </div>
 
