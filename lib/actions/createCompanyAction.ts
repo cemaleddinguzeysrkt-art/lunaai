@@ -65,6 +65,22 @@ export async function createCompany(input: CreateCompanyType) {
     },
   });
 }
+
+export async function deleteCompany(id:number){
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  await prisma.$transaction([
+  prisma.company_document.deleteMany({ where: { comp_id: id } }),
+  prisma.company_news.deleteMany({ where: { company_id: id } }),
+  prisma.company_note.deleteMany({ where: { company_id: id } }),
+  prisma.company.delete({ where: { id } }),
+]);
+}
+
 export async function editCompany(input: CreateCompanyType, companyId: number) {
   const session = await getServerSession(authOptions);
 

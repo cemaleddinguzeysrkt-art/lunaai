@@ -84,7 +84,7 @@ export default function ArticleReview({
   const [addCompanyModalOpened, setAddCompanyModalOpened] =
     useState<boolean>(false);
   const [checkedFilters, setCheckedFilters] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [isOtherIndustryChecked, setIsOtherIndustryChecked] = useState(false);
   const [otherIndustryInput, setOtherIndustryInput] = useState("");
@@ -110,10 +110,10 @@ export default function ArticleReview({
     Record<number, { normal: string | null; light: string | null }>
   >({});
   const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(
-    Number(leftWidth?.value ?? "20")
+    Number(leftWidth?.value ?? "20"),
   );
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(
-    Number(rightWidth?.value ?? "20")
+    Number(rightWidth?.value ?? "20"),
   );
   const [isResizingRight, setIsResizingRight] = useState(false);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
@@ -131,6 +131,9 @@ export default function ArticleReview({
   const [centerArticle, setCenterArticle] = useState<
     ArticleType | TrainedArticleType | null
   >(null);
+  const [tempCenterArticle, setTempCenterArticle] = useState<
+    ArticleType | null
+  >(null);
   const [trainedCenterArticle, setTrainedCenterArticle] =
     useState<TrainedArticleType | null>(null);
 
@@ -147,8 +150,9 @@ export default function ArticleReview({
   const [hasMore, setHasMore] = useState(true);
   const trainingIdMap = useRef<Map<number, number>>(new Map());
 
-  const formattedActiveArticleContent =
-    centerArticle?.content?.replace(/\\n/g, "\n") ?? "";
+  const formattedActiveArticleContent = 
+    (centerArticle?.rich_content ?? centerArticle?.content ?? "")
+      .replace(/\\n/g, "\n");
 
   useEffect(() => {
     const currentType = searchParams.get("type") ?? "cleanining";
@@ -188,6 +192,7 @@ export default function ArticleReview({
         const nextNews = await fetchNextCenterNews(trainingPageType);
         console.log("nexxxxxxx", nextNews);
         setCenterArticle(nextNews);
+        setTempCenterArticle(nextNews)
       } catch (error) {
         console.error("Fetch error:", error);
       } finally {
@@ -281,11 +286,11 @@ export default function ArticleReview({
   };
 
   const selectedCategoriesCount = Object.entries(checkedFilters).filter(
-    ([key, v]) => v && key.startsWith("Category-")
+    ([key, v]) => v && key.startsWith("Category-"),
   ).length;
 
   const selectedIndustriesCount = Object.entries(checkedFilters).filter(
-    ([key, v]) => v && key.startsWith("Industry-")
+    ([key, v]) => v && key.startsWith("Industry-"),
   ).length;
 
   const toggleFilter = (option: string) => {
@@ -296,7 +301,7 @@ export default function ArticleReview({
 
       // count current selections of this type
       const currentCount = Object.entries(prev).filter(
-        ([key, v]) => v && key.startsWith(type + "-")
+        ([key, v]) => v && key.startsWith(type + "-"),
       ).length;
 
       // if trying to ADD and already 2 selected → block
@@ -306,7 +311,7 @@ export default function ArticleReview({
           {
             id: "max-selection-toast",
             richColors: true,
-          }
+          },
         );
         return prev; // do nothing
       }
@@ -412,7 +417,7 @@ export default function ArticleReview({
       console.log(
         "Widths saved accurately:",
         leftWidthRef.current,
-        rightWidthRef.current
+        rightWidthRef.current,
       );
     } catch (err) {
       console.error("Save failed:", err);
@@ -446,7 +451,7 @@ export default function ArticleReview({
         rightWidthRef.current = percent;
       }
     },
-    [isResizingLeft, isResizingRight]
+    [isResizingLeft, isResizingRight],
   );
 
   useEffect(() => {
@@ -487,7 +492,7 @@ export default function ArticleReview({
   }, [articles]);
 
   const handleCleaningFeedback = async (
-    feedbackType: "like" | "dislike" | "notsure"
+    feedbackType: "like" | "dislike" | "notsure",
   ) => {
     setAddingFeedbackStates((prev) => ({ ...prev, [feedbackType]: true }));
 
@@ -526,6 +531,7 @@ export default function ArticleReview({
         return;
       }
       setCenterArticle(nextNews);
+      setTempCenterArticle(nextNews)
       handleSetActiveNews(nextNews.id);
       scrollFiltersToTop();
       scrollContentsToTop();
@@ -629,25 +635,30 @@ export default function ArticleReview({
     }
   }, [centerArticle?.id as number]);
 
+  // useEffect(() => {
+  //   if (!articles || articles.length === 0) return;
+
+  //   if (searchParams.get("activeNews")) return;
+
+  //   const firstId = articles[0].id;
+
+  //   router.replace(
+  //     `${pathname}?${searchParams.toString()}&activeNews=${firstId}`,
+  //     { scroll: false },
+  //   );
+  // }, [articles, searchParams, pathname, router]);
+
   useEffect(() => {
-    if (!articles || articles.length === 0) return;
-
-    if (searchParams.get("activeNews")) return;
-
-    const firstId = articles[0].id;
-
-    router.replace(
-      `${pathname}?${searchParams.toString()}&activeNews=${firstId}`,
-      { scroll: false }
-    );
-  }, [articles, searchParams, pathname, router]);
-
+    
+    console.log("temppppppp",tempCenterArticle)
+  }, [tempCenterArticle]);
+  
   useEffect(() => {
     if (trainingPageType !== "classifying") return;
 
     const training = (centerArticle as TrainedArticleType)?.news_training;
     const categoryString =
-      training && training.length > 0 ? training[0].category ?? "" : "";
+      training && training.length > 0 ? (training[0].category ?? "") : "";
 
     if (!categoryString) {
       setCheckedFilters({});
@@ -745,9 +756,27 @@ export default function ArticleReview({
   };
 
   const handleContinueClicked = () => {
-    shiftNextNews();
+    if (!tempCenterArticle) {
+      setCenterArticle(null);
+      setShowingSelectedNews(false);
+      removeActiveNewsUrl()
+      return;
+    }
+
+    setCenterArticle(tempCenterArticle);
+    handleSetActiveNews(tempCenterArticle.id);
+    scrollFiltersToTop();
+    scrollContentsToTop();
+    scrollNewsListToTop();
     setShowingSelectedNews(false);
+    removeActiveNewsUrl()
   };
+
+  const removeActiveNewsUrl = ()=>{
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("activeNews");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
 
   const hasAtLeastOneCategoryAndIndustry = (() => {
     const entries = Object.entries(checkedFilters).filter(([, v]) => v);
@@ -805,7 +834,9 @@ export default function ArticleReview({
                     key={status}
                     onClick={() => {
                       setTrainingPageType(
-                        status.toLocaleLowerCase() as "classifying" | "cleaning"
+                        status.toLocaleLowerCase() as
+                          | "classifying"
+                          | "cleaning",
                       );
                       setShowClassifyMenu(false);
                     }}
@@ -832,7 +863,7 @@ export default function ArticleReview({
             >
               {/* <Globe size={14} className="text-subtitle-dark/80" /> */}
               <Link
-                target="#"
+                target="_blank"
                 href={centerArticle?.url ?? ""}
                 className="text-xs text-subtitle-dark font-semibold"
               >
@@ -908,7 +939,7 @@ export default function ArticleReview({
           }}
         >
           <div
-            className="flex-1 overflow-y-auto py-4  space-y-4 scrollbar-custom "
+            className="flex-1 overflow-y-auto py-4 space-y-5 scrollbar-custom "
             ref={articlesScrollContainerRef}
           >
             {articlesList && articlesList.length > 0 ? (
@@ -946,9 +977,9 @@ export default function ArticleReview({
                         {article?.id}
                       </div>
                     </div>
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium text-neutral-900">
+                    {/* <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium text-neutral-900">
                       {articlesList.length - idx}
-                    </div>
+                    </div> */}
                   </div>
                 );
               })
@@ -1030,6 +1061,9 @@ export default function ArticleReview({
                   <div className="prose prose-sm max-w-none text-title-dark/90 text-sm leading-8 selection:bg-blue-100 selection:text-blue-900 whitespace-pre-wrap">
                     {formattedActiveArticleContent ?? ""}
                   </div>
+                  <div className="text-subtitle-dark/80 text-sm text-end mt-4 font-semibold">
+                    {centerArticle.id}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1065,7 +1099,11 @@ export default function ArticleReview({
           </div>
         ) : (
           <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
-            No clean news
+            {trainingPageType == "cleaning" ? (
+              <span>No news</span>
+            ) : (
+              <span>No clean news</span>
+            )}
           </div>
         )}
 

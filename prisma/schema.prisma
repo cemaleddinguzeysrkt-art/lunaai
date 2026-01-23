@@ -8,20 +8,20 @@ datasource db {
 }
 
 model company {
-  id              Int               @id @default(autoincrement())
-  name            String            @db.VarChar(255)
-  website         String?           @db.VarChar(255)
-  user_id         Int?
-  created_date    DateTime?         @default(now()) @db.DateTime(0)
-  tags            String?           @db.VarChar(255)
-  status_id       Int?
-  origin_id       Int?
-  user            user?             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "company_ibfk_1")
-  company_history company_history[]
-  company_news    company_news[]
-  company_note    company_note[]
-  lead            lead[]
-  task            task[]
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(255)
+  website              String?                @db.VarChar(255)
+  user_id              Int?
+  created_date         DateTime?              @default(now()) @db.DateTime(0)
+  tags                 String?                @db.VarChar(255)
+  status_id            Int?
+  origin_id            Int?
+  user                 user?                  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "company_ibfk_1")
+  company_history      company_history[]
+  company_news         company_news[]
+  company_note         company_note[]
+  lead_deletethistable lead_deletethistable[]
+  task                 task[]
 
   @@index([user_id], map: "user_id")
 }
@@ -58,37 +58,24 @@ model definition {
   value       String?   @db.VarChar(1000)
 }
 
-model lead {
-  id           Int       @id @default(autoincrement())
-  company_id   Int?
-  created_date DateTime? @default(now()) @db.DateTime(0)
-  user_id      Int?
-  note         String?   @db.Text
-  source_id    Int?
-  company      company?  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lead_ibfk_1")
-  user         user?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lead_ibfk_2")
-
-  @@index([company_id], map: "company_id")
-  @@index([source_id], map: "source_id")
-  @@index([user_id], map: "user_id")
-}
-
 model news {
   id             Int            @id @default(autoincrement())
   published_date DateTime?      @db.DateTime(0)
   news_source_id Int?
   url            String?        @db.VarChar(2048)
   content        String?        @db.Text
+  rich_content   String?        @db.Text
   time_stamp     DateTime?      @db.DateTime(0)
   author         String?        @db.VarChar(255)
   header         String?        @db.Text
   invalid        Int?           @default(0)
+  external_id    String?        @db.VarChar(45)
   company_news   company_news[]
   news_source    news_source?   @relation(fields: [news_source_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_ibfk_1")
-  training       training[]
   news_training  news_training[]
 
   @@index([news_source_id], map: "source_id")
+  @@index([url(length: 255)], map: "idx_news_url")
 }
 
 model news_source {
@@ -110,48 +97,20 @@ model task {
   @@index([comp_id], map: "comp_id")
 }
 
-model training {
-  id           Int              @id @default(autoincrement())
-  news_id      Int?
-  result       training_result?
-  category_id  Int?
-  user_id      Int?
-  created_date DateTime?        @default(now()) @db.DateTime(0)
-  news         news?            @relation(fields: [news_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "training_ibfk_1")
-  user         user?            @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "training_ibfk_3")
-
-  @@index([category_id], map: "category_id")
-  @@index([news_id], map: "news_id")
-  @@index([user_id], map: "user_id")
-}
-
-model training_target {
-  id           Int       @default(autoincrement())
-  user_id      Int
-  created_date DateTime? @default(now()) @db.DateTime(0)
-  detail       String?   @db.Text
-  user         user      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "training_target_ibfk_1")
-
-  @@id([id, user_id])
-  @@index([user_id], map: "user_id")
-}
-
 model user {
-  id                  Int               @id @default(autoincrement())
-  name                String            @db.VarChar(255)
-  created_date        DateTime?         @default(now()) @db.DateTime(0)
-  password            String            @db.VarChar(255)
-  role                String?           @db.VarChar(50)
-  email               String            @unique(map: "unique_email_idx") @db.VarChar(255)
-  passwordResetToken  String?           @db.VarChar(255)
-  passwordResetExpiry DateTime?         @db.DateTime(0)
-  company             company[]
-  company_history     company_history[]
-  company_note        company_note[]
-  lead                lead[]
-  task                task[]
-  training            training[]
-  training_target     training_target[]
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(255)
+  created_date         DateTime?              @default(now()) @db.DateTime(0)
+  password             String                 @db.VarChar(255)
+  role                 String?                @db.VarChar(50)
+  email                String                 @unique(map: "unique_email_idx") @db.VarChar(255)
+  passwordResetToken   String?                @db.VarChar(255)
+  passwordResetExpiry  DateTime?              @db.DateTime(0)
+  company              company[]
+  company_history      company_history[]
+  company_note         company_note[]
+  lead_deletethistable lead_deletethistable[]
+  task                 task[]
 }
 
 model company_note {
@@ -179,9 +138,32 @@ model news_training {
   news       news?     @relation(fields: [news_id], references: [id])
 }
 
-model transfer_watermark {
-  table_name          String    @id @db.VarChar(50)
-  last_processed_date DateTime? @db.DateTime(0)
+model company_document {
+  id           Int       @id @default(autoincrement())
+  comp_id Int
+  doc_id  Int
+}
+
+model document {
+  id           Int       @id @default(autoincrement())
+  name         String?   @db.VarChar(500)
+  user_id      Int?
+  date_created DateTime? @db.DateTime(0)
+}
+
+model lead_deletethistable {
+  id           Int       @id @default(autoincrement())
+  company_id   Int?
+  created_date DateTime? @default(now()) @db.DateTime(0)
+  user_id      Int?
+  note         String?   @db.Text
+  source_id    Int?
+  company      company?  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lead_deletethistable_ibfk_1")
+  user         user?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lead_deletethistable_ibfk_2")
+
+  @@index([company_id], map: "company_id")
+  @@index([source_id], map: "source_id")
+  @@index([user_id], map: "user_id")
 }
 
 enum task_status {
@@ -189,10 +171,4 @@ enum task_status {
   in_progress
   completed
   blocked
-}
-
-enum training_result {
-  like
-  unlike
-  pass
 }
