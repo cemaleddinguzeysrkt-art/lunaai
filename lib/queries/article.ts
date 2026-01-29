@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth";
 import { definition as Definition } from "@/app/generated/prisma/client";
-import { getWeeklyTargetProgress } from "./user";
+import { getNextActiveSource } from "./user";
 
 // export async function getArticles(
 //   trainingType: "classifying" | "cleaning" = "cleaning"
@@ -263,12 +263,6 @@ export async function getWidth(
   };
 }
 
-export async function getTrainings() {
-  const trainings = await prisma.training.findMany();
-
-  return trainings;
-}
-
 export async function getFeedbacks(newsId: number) {
   const session = await getServerSession(authOptions);
   if (!session) throw new Error("Unauthorized");
@@ -294,29 +288,33 @@ export async function getNextCenterNews() {
 
   const userId = session.user.id;
 
-  const userWeeklyTargets = await getWeeklyTargetProgress("cleaning")
-  const isTargetReached = userWeeklyTargets.completedTargets >= userWeeklyTargets.totalTargets
+  // const userWeeklyTargets = await getWeeklyTargetProgressForSource("cleaning")
+  // const isTargetReached = userWeeklyTargets.completedTargets >= userWeeklyTargets.totalTargets
 
-  if(isTargetReached){
-    return null
-  }
+  // if(isTargetReached){
+  //   return null
+  // }
 
-  const userTarget = await prisma.definition.findFirst({
-    where: {
-      name: { startsWith: `target:training-cleaning;user:${userId}` },
-    },
-  });
+  // const userTarget = await prisma.definition.findFirst({
+  //   where: {
+  //     name: { startsWith: `target:training-cleaning;user:${userId}` },
+  //   },
+  // });
 
-  const sourceIdStr = userTarget?.name
-    ?.split(";")
-    .find((part) => part.startsWith("sourceid:"))
-    ?.split(":")[1];
+  const activeSource = await getNextActiveSource("cleaning");
+  const sourceId = activeSource?.sourceId
+  if (!sourceId) return null;
 
-  const sourceId = sourceIdStr ? Number(sourceIdStr) : null;
+  // const sourceIdStr = userTarget?.name
+  //   ?.split(";")
+  //   .find((part) => part.startsWith("sourceid:"))
+  //   ?.split(":")[1];
 
-  if (!sourceId) {
-    return null;
-  }
+  // const sourceId = sourceIdStr ? Number(sourceIdStr) : null;
+
+  // if (!sourceId) {
+  //   return null;
+  // }
 
   // Get min & max id for this source
   const result = await prisma.news.aggregate({
@@ -378,29 +376,33 @@ export async function getNextClassifyingNews() {
 
   const userId = session.user.id;
 
-  const userWeeklyTargets = await getWeeklyTargetProgress("classifying")
-  const isTargetReached = userWeeklyTargets.completedTargets >= userWeeklyTargets.totalTargets
+  // const userWeeklyTargets = await getWeeklyTargetProgress("classifying")
+  // const isTargetReached = userWeeklyTargets.completedTargets >= userWeeklyTargets.totalTargets
 
-  if(isTargetReached){
-    return null
-  }
+  // if(isTargetReached){
+  //   return null
+  // }
 
-  const userTarget = await prisma.definition.findFirst({
-    where: {
-      name: { startsWith: `target:training-classifying;user:${userId}` },
-    },
-  });
+  // const userTarget = await prisma.definition.findFirst({
+  //   where: {
+  //     name: { startsWith: `target:training-classifying;user:${userId}` },
+  //   },
+  // });
 
-  const sourceIdStr = userTarget?.name
-    ?.split(";")
-    .find((part) => part.startsWith("sourceid:"))
-    ?.split(":")[1];
+  const activeSource = await getNextActiveSource("classifying");
+  const sourceId = activeSource?.sourceId
+  if (!sourceId) return null;
 
-  const sourceId = sourceIdStr ? Number(sourceIdStr) : null;
+  // const sourceIdStr = userTarget?.name
+  //   ?.split(";")
+  //   .find((part) => part.startsWith("sourceid:"))
+  //   ?.split(":")[1];
 
-  if (!sourceId) {
-    return null;
-  }
+  // const sourceId = sourceIdStr ? Number(sourceIdStr) : null;
+
+  // if (!sourceId) {
+  //   return null;
+  // }
 
   const nextClassifyingNews = await prisma.news_training.findFirst({
     where: {

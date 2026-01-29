@@ -150,8 +150,9 @@ export default function ArticleReview({
   const [hasMore, setHasMore] = useState(true);
   const trainingIdMap = useRef<Map<number, number>>(new Map());
 
-  const formattedActiveArticleContent =
-    centerArticle?.content?.replace(/\\n/g, "\n") ?? "";
+  const formattedActiveArticleContent = 
+    (centerArticle?.rich_content ?? centerArticle?.content ?? "")
+      .replace(/\\n/g, "\n");
 
   useEffect(() => {
     const currentType = searchParams.get("type") ?? "cleanining";
@@ -862,7 +863,7 @@ export default function ArticleReview({
             >
               {/* <Globe size={14} className="text-subtitle-dark/80" /> */}
               <Link
-                target="#"
+                target="_blank"
                 href={centerArticle?.url ?? ""}
                 className="text-xs text-subtitle-dark font-semibold"
               >

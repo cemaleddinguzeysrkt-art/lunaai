@@ -8,7 +8,7 @@ import {
   getTags,
   getWidth,
 } from "@/lib/queries/article";
-import { getWeeklyTargetProgress } from "@/lib/queries/user";
+import { getNextActiveSource, getWeeklyTargetProgressForUser } from "@/lib/queries/user";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,8 @@ export default async function TrainingsPage({
   const trainedActiveNewsId = resolvedSearchParams.trainedActiveNews
     ? Number(resolvedSearchParams.trainedActiveNews)
     : null;
+  
+  const nextActiveSource = await getNextActiveSource(trainingType)
 
   const [articles, filters, origins, statuses, tags, initialWidth, feedbacks, weeklyTargetProgress] =
     await Promise.all([
@@ -43,7 +45,7 @@ export default async function TrainingsPage({
       getTags(),
       getWidth(trainingType),
       activeNewsId ? getFeedbacks(activeNewsId) : Promise.resolve([]),
-      getWeeklyTargetProgress(trainingType),
+      getWeeklyTargetProgressForUser(trainingType,nextActiveSource?.weeklyLimit,nextActiveSource?.sourceId),
     ]);
 
   return (

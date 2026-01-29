@@ -2,7 +2,6 @@ import { user as User } from "@/app/generated/prisma/client";
 import {
   getArticles,
   getNextCenterNews,
-  getTrainings,
 } from "../queries/article";
 import { getCompanies, getCompanyNewses, getTasks } from "../queries/company";
 import { geteNewsSources } from "../queries/definition";
@@ -25,7 +24,7 @@ export type ArticlesArrayType = Awaited<ReturnType<typeof getArticles>>;
 export type TrainedArticleType = ArticlesArrayType extends (infer T)[] ? T : never;
 export type ArticleType = Awaited<ReturnType<typeof getNextCenterNews>>;
 export type NewsesArrayType = Awaited<ReturnType<typeof getCompanyNewses>>;
-export type TrainingsArrayType = Awaited<ReturnType<typeof getTrainings>>;
+// export type TrainingsArrayType = Awaited<ReturnType<typeof getTrainings>>;
 export type CompanyArrayType = Awaited<ReturnType<typeof getCompanies>>;
 export type CompanyType = CompanyArrayType extends (infer T)[] ? T : never;
 export type TasksArrayType = Awaited<ReturnType<typeof getTasks>>;
